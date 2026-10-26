@@ -1,0 +1,9 @@
+{
+  "name": "dev-workflow",
+  "version": "1.0.0",
+  "description": "Analysis/plan workflow: code analysis, fixing findings, planning, pitching and implementing features via running list files.",
+  "author": {
+    "name": "stames",
+    "email": "stames.video@gmail.com"
+  }
+}

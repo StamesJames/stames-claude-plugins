@@ -1,0 +1,14 @@
+{
+  "name": "stames-plugins",
+  "description": "stames' personal Claude Code plugins",
+  "owner": {
+    "name": "stames"
+  },
+  "plugins": [
+    {
+      "name": "dev-workflow",
+      "source": "./plugins/dev-workflow",
+      "description": "Analysis/plan workflow: code analysis, fixing findings, planning, pitching and implementing features via running list files."
+    }
+  ]
+}
