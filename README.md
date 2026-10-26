@@ -2,14 +2,14 @@
 
 Personal Claude Code plugin marketplace.
 
-| Plugin | Description |
-|---|---|
+| Plugin                               | Description                                                                                                                  |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
 | [dev-workflow](plugins/dev-workflow) | Analysis/plan workflow: code analysis, fixing findings, planning, pitching and implementing features via running list files. |
 
 ## Install
 
 ```sh
-claude plugin marketplace add <owner>/<repo>   # or a local path / git URL
+claude plugin marketplace add StamesJames/stames-claude-plugins
 claude plugin install dev-workflow@stames-plugins
 ```
 
