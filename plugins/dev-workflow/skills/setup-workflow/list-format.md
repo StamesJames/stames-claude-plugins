@@ -12,7 +12,7 @@ All at the repo root.
 |---|---|---|
 | `CLAUDE_ANALYSIS.md` | `/analyse-code` | `/fix-next-finding`, `/fix-all-findings` |
 | `USER_ANALYSIS.md` | the user, by hand | the same, plus `/fix-next-user-finding`, `/fix-all-user-findings` |
-| `CLAUDE_PLAN.md` | `/plan-features` | `/pitch-feature` only, one item after approval, never in bulk |
+| `CLAUDE_PLAN.md` | `/plan-features` | `/pitch-feature` (one item after approval), or `/implement-all-claude-features` (only after the user confirms the run) |
 | `USER_PLAN.md` | the user, by hand | `/implement-next-feature`, `/implement-all-features` |
 | `USER_WORKFLOW.md` | the user (drafted by `/setup-workflow`) | read by every skill |
 

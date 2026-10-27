@@ -1,8 +1,8 @@
 # Claude Plan
 
 Running list of ideas and concrete features, written by Claude through `/plan-features`. Items
-are never implemented in bulk: `/pitch-feature` pitches one at a time and builds it only after
-you approve. Rules (ids, stamps, deleting done items) are in
+are built only with your approval: `/pitch-feature` pitches one at a time and builds it after
+you approve, `/implement-all-claude-features` builds them all after you confirm the run. Rules (ids, stamps, deleting done items) are in
 `list-format.md` of the `dev-workflow` plugin's `setup-workflow` skill. All paths are relative to `<code root>`
 unless noted. Items are roughly ordered by priority inside each section.
 

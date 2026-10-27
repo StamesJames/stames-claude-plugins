@@ -7,7 +7,7 @@ description: Set up the analysis/plan workflow (running lists CLAUDE_ANALYSIS.md
 
 The workflow skills (`analyse-code`, `fix-next-finding`, `fix-all-findings`,
 `fix-next-user-finding`, `fix-all-user-findings`, `plan-features`, `pitch-feature`,
-`implement-next-feature`, `implement-all-features`) are generic. A project plugs into them with:
+`implement-next-feature`, `implement-all-features`, `implement-all-claude-features`) are generic. A project plugs into them with:
 
 - **`USER_WORKFLOW.md`** (repo root): the user's decisions and preferences. The user edits it
   by hand; you draft it here and afterwards change it only when asked.

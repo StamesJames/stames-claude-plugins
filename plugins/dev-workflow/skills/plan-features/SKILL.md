@@ -8,8 +8,9 @@ description: Look for ideas and concrete features that would improve the project
 `CLAUDE_PLAN.md` (repo root) is Claude's **running list** of ideas and concrete features
 that would make the project better. Every pass updates it. This skill only thinks and records:
 do not change project code, and don't commit (the user commits planning files themselves).
-Items in this list are never implemented in bulk. They are pitched to the user one at a time
-with `/pitch-feature`.
+Items in this list are only built with the user's approval: pitched one at a time with
+`/pitch-feature`, or all at once with `/implement-all-claude-features` after the user confirms
+the run.
 
 `USER_PLAN.md` is the user's own list with the same format. Read it but **never edit it**.
 

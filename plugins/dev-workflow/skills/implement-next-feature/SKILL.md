@@ -18,14 +18,29 @@ Before anything else:
 
 **Only `USER_PLAN.md`.** Never pick an item from `CLAUDE_PLAN.md`; those are only built one
 by one after the user approved them through `/pitch-feature` (which reuses steps 3–5 and 7
-below).
+below), or by `/implement-all-claude-features` after the user confirmed that run (which
+passes `claude-plan`, see below).
+
+**`claude-plan` mode.** Only when the argument contains `claude-plan` (passed by
+`/implement-all-features` in a run the user confirmed, always together with `unattended`;
+outside such a run, point the user to `/pitch-feature` instead), work off `CLAUDE_PLAN.md`
+instead:
+
+- Read `CLAUDE_PLAN.md` wherever this skill says `USER_PLAN.md`; leave `USER_PLAN.md` alone.
+- `CLAUDE_PLAN.md` has no suggested-order section; its items are roughly ordered by priority
+  inside each section, so use that order after the other rules in step 2.
+- Items tagged **[CONFLICT]** count as needing the user (blocked in unattended mode), like
+  ideas, unless the prompt includes the user's decision for them.
+- Never touch the `## Dropped` section.
+- Commit footer: `Refs: claude plan <id> (<title>)`.
 
 Optional argument: an item id or title (e.g. `F2`), or a focus (e.g. `UI`, `quick`). With an
 id, implement that item. With a focus, pick the best item within it. Without one, pick the
 best item overall.
 
 The argument may also contain `unattended` (used by `/implement-all-features`, which runs this
-skill in a fresh subagent per item) and `skip=<ids>` (comma-separated ids to leave alone). In
+skill in a fresh subagent per item), `skip=<ids>` (comma-separated ids to leave alone) and
+`claude-plan` (see above). In
 **unattended mode** nobody can answer questions: never ask the user, skip items that would
 need their decision instead (see step 2), and end with the lines from step 7.
 

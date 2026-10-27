@@ -5,9 +5,9 @@ description: Pick the single item from CLAUDE_PLAN.md that would be best to impl
 
 # Pitch one feature from Claude's plan
 
-`CLAUDE_PLAN.md` (repo root) holds Claude's own ideas, written by `/plan-features`. The user
-does **not** want these implemented in bulk: this skill pitches **one** item, and builds it
-only after the user explicitly approves. Never loop, never chain a second item in the same
+`CLAUDE_PLAN.md` (repo root) holds Claude's own ideas, written by `/plan-features`. This skill
+pitches **one** item, and builds it only after the user explicitly approves (building them
+all at once is `/implement-all-claude-features`, which asks for confirmation first). Never loop, never chain a second item in the same
 run, and never run this skill unattended or in a subagent.
 
 Optional argument: an item id (e.g. `F3`) to pitch that one, or a focus (e.g. `quick`,
