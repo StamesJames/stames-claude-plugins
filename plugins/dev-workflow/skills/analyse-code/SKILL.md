@@ -1,14 +1,14 @@
 ---
 name: analyse-code
-description: Run a cleanup analysis pass over the project, looking for bugs, unclean implementations and performance problems, and record the findings with date/time stamps in CLAUDE_ANALYSIS.md at the repo root. Use when the user asks for a code analysis, cleanup round, audit or review of the whole project (not of a single diff). Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
+description: Run a cleanup analysis pass over the project, looking for bugs, unclean implementations and performance problems, and record the findings with date/time stamps in CLAUDE_ANALYSIS.md at the repo root, then commit that file. Use when the user asks for a code analysis, cleanup round, audit or review of the whole project (not of a single diff). Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
 ---
 
 # Code analysis pass
 
 The goal is to keep the project in a clean state so new features are easy to add.
 `CLAUDE_ANALYSIS.md` (repo root) is a **running list** of findings that gets updated by every
-pass. This skill only analyses and records: do not change project code unless the user asks,
-and don't commit.
+pass. This skill only analyses and records: do not change project code unless the user asks.
+At the end it commits `CLAUDE_ANALYSIS.md` (and nothing else).
 
 Optional argument: a focus area (e.g. a subsystem, `save system`, `performance`). Without one,
 analyse the whole project.
@@ -64,8 +64,20 @@ Keep its structure and follow `list-format.md`.
   new, <m> fixed.`
 - Rewrite section 4 (suggested order) so it reflects the open items.
 
-## 4. Report back
+## 4. Commit
+
+Commit the updated list:
+
+- Stage only `CLAUDE_ANALYSIS.md`, by explicit path. Never stage other changes that are in the
+  tree (if `CLAUDE_ANALYSIS.md` itself already had uncommitted edits before this pass, mention
+  that they are included).
+- Message per `USER_WORKFLOW.md` → `## Commits`: type `chore` (the workflow list files), scope
+  from its scope list or none if none fits (see "Scope reporting" in `list-format.md`), e.g.
+  `chore: record analysis pass (<n> new, <m> fixed)`. No `Refs:` footer (the pass doesn't
+  resolve items by changing code). End with the attribution lines from the system reminder.
+
+## 5. Report back
 
 Tell the user, in a few short paragraphs: how many findings are new, how many are fixed and how
-many are still open, the most important new ones in plain words, and the recommended next step.
-Do not paste the whole file.
+many are still open, the most important new ones in plain words, the commit (with a scope
+suggestion if no scope fit), and the recommended next step. Do not paste the whole file.

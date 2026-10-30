@@ -1,13 +1,13 @@
 ---
 name: plan-features
-description: Look for ideas and concrete features that would improve the project, aligned with the design docs named in USER_WORKFLOW.md, and record them with date/time stamps in CLAUDE_PLAN.md at the repo root. Ideas that conflict with the design docs are only added when exceptionally good (and allowed), clearly marked with the conflict and the reason. Use when the user asks for feature ideas, a brainstorm, a planning pass or suggestions for what to build next. Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
+description: Look for ideas and concrete features that would improve the project, aligned with the design docs named in USER_WORKFLOW.md, and record them with date/time stamps in CLAUDE_PLAN.md at the repo root, then commit that file. Ideas that conflict with the design docs are only added when exceptionally good (and allowed), clearly marked with the conflict and the reason. Use when the user asks for feature ideas, a brainstorm, a planning pass or suggestions for what to build next. Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
 ---
 
 # Feature planning pass
 
 `CLAUDE_PLAN.md` (repo root) is Claude's **running list** of ideas and concrete features
 that would make the project better. Every pass updates it. This skill only thinks and records:
-do not change project code, and don't commit (the user commits planning files themselves).
+do not change project code. At the end it commits `CLAUDE_PLAN.md` (and nothing else).
 Items in this list are only built with the user's approval: pitched one at a time with
 `/pitch-feature`, or all at once with `/implement-all-claude-features` after the user confirms
 the run.
@@ -74,8 +74,21 @@ Keep its structure and follow `list-format.md` (entry formats, ids, stamps).
 - Add a line to the **Passes** list in the header:
   `- <date time TZ> at <commit>: <scope>, <n> new, <m> updated, <k> removed.`
 
-## 4. Report back
+## 4. Commit
+
+Commit the updated list:
+
+- Stage only `CLAUDE_PLAN.md`, by explicit path. Never stage other changes that are in the
+  tree (if `CLAUDE_PLAN.md` itself already had uncommitted edits before this pass, mention
+  that they are included).
+- Message per `USER_WORKFLOW.md` → `## Commits`: type `chore` (the workflow list files), scope
+  from its scope list or none if none fits (see "Scope reporting" in `list-format.md`), e.g.
+  `chore: record planning pass (<n> new, <m> updated, <k> removed)`. No `Refs:` footer (the
+  pass doesn't implement items). End with the attribution lines from the system reminder.
+
+## 5. Report back
 
 In a few short paragraphs: how many items are new, updated and removed, the best new ones in
-plain words, any `[CONFLICT]` item and why you added it, and which item you'd pitch first
-with `/pitch-feature`. Do not paste the whole file. Remind the user the list is uncommitted.
+plain words, any `[CONFLICT]` item and why you added it, the commit (with a scope suggestion
+if no scope fit), and which item you'd pitch first with `/pitch-feature`. Do not paste the
+whole file.
