@@ -6,8 +6,8 @@ description: Set up the analysis/plan workflow (running lists CLAUDE_ANALYSIS.md
 # Set up or check the workflow
 
 The workflow skills (`analyse-code`, `fix-next-finding`, `fix-all-findings`,
-`fix-next-user-finding`, `fix-all-user-findings`, `plan-features`, `pitch-feature`,
-`implement-next-feature`, `implement-all-features`, `implement-all-claude-features`) are generic. A project plugs into them with:
+`plan-features`, `explore-feature`, `pitch-feature`, `implement-next-feature`,
+`implement-all-features`, `review-change`) are generic. A project plugs into them with:
 
 - **`USER_WORKFLOW.md`** (repo root): the user's decisions and preferences. The user edits it
   by hand; you draft it here and afterwards change it only when asked.
@@ -15,7 +15,7 @@ The workflow skills (`analyse-code`, `fix-next-finding`, `fix-all-findings`,
   current.
 - **The four list files** at the repo root.
 
-Read `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md` first
+Read `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md` first.
 Templates are in `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/templates/`.
 
 This skill only writes the workflow files and `CLAUDE.md`. It never commits (the user commits
@@ -53,8 +53,8 @@ an older, project-specific form of this workflow (see A.4).
 Draft `USER_WORKFLOW.md` from the template and the `## Workflow` section from
 `templates/claude-md-section.md`, filled with what you found. Keep the template's `## Commits`
 section as it is (it is the user's default) apart from the scope list. Show the user a short
-summary of the draft: design docs, idea sources, analysis focus, hands-off paths, ask-before
-rules, scopes, verification commands. Then ask with `AskUserQuestion` only what you could not
+summary of the draft: design docs, idea sources, analysis focus, code standards, hands-off
+paths, ask-before rules, run settings (models), scopes, verification commands. Then ask with `AskUserQuestion` only what you could not
 settle yourself, for example:
 
 - verification commands, if none were found or they don't run;
@@ -63,8 +63,9 @@ settle yourself, for example:
 - an existing commit convention that differs from the default: keep the default (recommended)
   or describe the existing one in `## Commits`.
 
-Idea sources and analysis focus are drafts the user is expected to edit later: propose
-sensible ones and say so instead of asking about each.
+Idea sources, analysis focus, code standards and run settings are drafts the user is
+expected to edit later: propose sensible ones (code standards from the linters, formatter
+configs and conventions you found) and say so instead of asking about each.
 
 ### A.3 Write
 
@@ -96,7 +97,7 @@ point to `.claude/skills/...` or `~/.claude/skills/...` (from before these skill
 ### A.5 Report
 
 What you created or changed, what the user should review first in `USER_WORKFLOW.md` (idea
-sources, analysis focus, scopes), the verification commands and whether they ran, and a
+sources, analysis focus, code standards, run settings, scopes), the verification commands and whether they ran, and a
 suggested commit message (`chore(workflow): set up workflow lists` or per the project's
 `## Commits`). Remind the user that nothing was committed.
 
@@ -113,7 +114,10 @@ suggested commit message (`chore(workflow): set up workflow lists` or per the pr
    - scopes that match no area any more, and areas that recent commits (`git log -50`) or the
      code show without a scope;
    - list files that are missing, lack `_Next id:_` lines, or have headers pointing to old
-     skill paths.
+     skill paths or naming skills that no longer exist (`/fix-next-user-finding`,
+     `/fix-all-user-findings`, `/implement-all-claude-features`: now `user-only` arguments,
+     and `CLAUDE_PLAN.md` items are approved into `USER_PLAN.md`); the same for the
+     `## Workflow` section of `CLAUDE.md`.
 3. Fix facts directly: the `## Workflow` section in `CLAUDE.md`, missing list files (from the
    templates), list headers. For `USER_WORKFLOW.md`, **propose** the changes and apply only
    those the user approves (`AskUserQuestion`, multi-select where it fits).

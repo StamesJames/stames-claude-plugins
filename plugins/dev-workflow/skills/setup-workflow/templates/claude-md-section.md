@@ -1,12 +1,12 @@
 ## Workflow
 
-This project uses the global workflow skills (`/analyse-code`, `/fix-next-finding`,
-`/plan-features`, `/pitch-feature`, `/implement-next-feature`, their loops, and
-`/setup-workflow`). The running lists `CLAUDE_ANALYSIS.md`, `USER_ANALYSIS.md`,
+This project uses the `dev-workflow` plugin's skills (`/analyse-code`, `/fix-next-finding`,
+`/fix-all-findings`, `/plan-features`, `/explore-feature`, `/pitch-feature`,
+`/implement-next-feature`, `/implement-all-features`, `/review-change`, `/setup-workflow`). The running lists `CLAUDE_ANALYSIS.md`, `USER_ANALYSIS.md`,
 `CLAUDE_PLAN.md` and `USER_PLAN.md` sit at the repo root; their rules are in
 `list-format.md` of the `dev-workflow` plugin's `setup-workflow` skill. The user's preferences for them (design
-docs, idea sources, hands-off paths, what to ask before, commit rules and scopes) are in
-`USER_WORKFLOW.md`. This section holds the facts; keep it current when the code changes. The
+docs, idea sources, code standards, hands-off paths, what to ask before, run settings, commit
+rules and scopes) are in `USER_WORKFLOW.md`. This section holds the facts; keep it current when the code changes. The
 lists may be newer than this file: if they disagree, check the code. When a finding or plan
 item is resolved during normal work, delete its entry in the same change.
 

@@ -2,9 +2,9 @@
 
 Personal Claude Code plugin marketplace.
 
-| Plugin                               | Description                                                                                                                  |
-| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| [dev-workflow](plugins/dev-workflow) | Analysis/plan workflow: code analysis, fixing findings, planning, pitching and implementing features via running list files. |
+| Plugin | Description |
+| --- | --- |
+| [dev-workflow](plugins/dev-workflow) | Plan-first dev workflow: explore and plan features, analyse code quality, then implement or fix list items unattended with one fresh agent per item. |
 
 ## Install
 

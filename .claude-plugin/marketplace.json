@@ -8,7 +8,7 @@
     {
       "name": "dev-workflow",
       "source": "./plugins/dev-workflow",
-      "description": "Analysis/plan workflow: code analysis, fixing findings, planning, pitching and implementing features via running list files."
+      "description": "Plan-first dev workflow: explore and plan features, analyse code quality, then implement or fix list items unattended with one fresh agent per item."
     }
   ]
 }

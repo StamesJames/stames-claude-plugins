@@ -1,7 +1,7 @@
 # Cleanup analysis
 
 Running list of open cleanup findings, written by `/analyse-code` and worked off by
-`/fix-next-finding`. Rules (ids, stamps, deleting fixed items) are in
+`/fix-next-finding` and `/fix-all-findings`. Rules (ids, stamps, deleting fixed items) are in
 `list-format.md` of the `dev-workflow` plugin's `setup-workflow` skill. All paths are relative to `<code root>`
 unless noted. Items are roughly ordered by priority inside each section.
 

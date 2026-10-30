@@ -36,29 +36,32 @@ the target's `CLAUDE.md`.
 
 How the pieces fit:
 
-- **`skills/setup-workflow/list-format.md` is the single source of truth** for the list format
-  and rules (ids, `_Next id:_`, stamps, `[HOLD]`, "done means deleted", `Refs:` commit
-  footers, scope reporting). Every other skill reads it instead of repeating it; change rules
-  there, not in individual skills.
+- **Three shared files in `skills/setup-workflow/`** hold the rules; skills read them instead
+  of repeating them, so change rules there:
+  - `list-format.md`: list format and rules (ids, `_Next id:_`, stamps, `[HOLD]`, "done means
+    deleted", Ideas as backlog, `Keep open for:`, `Decisions:` / `Model:` / `_Failed:_`
+    lines, model rubric, `Refs:` footers, scope reporting).
+  - `work-item.md`: the steps for one item (sections A–H: modes, needs-the-user check,
+    build, self-review, verify, update list, commit, report and `RESULT:` lines). Its section
+    letters are referenced by `fix-next-finding`, `implement-next-feature` and
+    `pitch-feature`; keep them stable or update those skills.
+  - `loop.md`: the run protocol (up-front triage and decisions, one subagent per item,
+    review subagent, failure handling with WIP branches and model escalation, after-run
+    analysis). Changing `work-item.md`'s `RESULT:` lines or arguments, or `review-change` /
+    `analyse-code` result lines, means updating `loop.md` too.
 - `skills/setup-workflow/templates/` holds the templates `/setup-workflow` copies into a target
   project (the four lists, `USER_WORKFLOW.md`, and `claude-md-section.md` for the target's
   `CLAUDE.md`). If a rule or section changes, check whether the templates and the "Check" mode
   of `setup-workflow/SKILL.md` need the same change.
-- **Single-item skills** (`fix-next-finding`, `implement-next-feature`) do the real work: pick,
-  fix/implement, verify, delete the entry, commit. They support an `unattended` mode with
-  `skip=<ids>` and emit machine-readable `RESULT:` / `SCOPE:` lines.
-- **Loop skills** (`fix-all-findings`, `implement-all-features`) are orchestrators: they never
-  touch code, they spawn one fresh `general-purpose` subagent per item that invokes the
-  single-item skill unattended, and parse its `RESULT:` lines. Changing the single-item
-  skill's argument or `RESULT:` format means updating the loop skill too.
-- **`*-user-*` variants** (`fix-next-user-finding`, `fix-all-user-findings`) are thin wrappers
-  that delegate to the general skill with the `user-only` argument; the logic lives only in
-  the general skill.
-- `CLAUDE_PLAN.md` is only built with the user's approval: `pitch-feature` implements one
-  approved item, reusing steps of `implement-next-feature/SKILL.md` by number (keep those step
-  numbers stable or update `pitch-feature`); `implement-all-claude-features` is a thin wrapper
-  that runs `implement-all-features` with `claude-plan`, which asks the user to confirm the run
-  and passes `claude-plan` on to `implement-next-feature`.
+- **Single-item skills** (`fix-next-finding`, `implement-next-feature`) only hold what is
+  specific to their lists (picking order, needs-the-user cases, commit type); the rest is
+  `work-item.md`. `user-only` restricts the fix skills to `USER_ANALYSIS.md`.
+- **Loop skills** (`fix-all-findings`, `implement-all-features`) are a few specifics on top of
+  `loop.md`. They never touch code.
+- `CLAUDE_PLAN.md` is never worked off directly: `pitch-feature` builds one item or approves
+  it into `USER_PLAN.md`, `explore-feature` works items out with the user and writes them to
+  `USER_PLAN.md`. Only `USER_PLAN.md` concrete features are implemented by the loops.
+- `review-change` and `analyse-code since=<commit>` are also run by the loops, unattended.
 
 Cross-skill references use `${CLAUDE_PLUGIN_ROOT}/skills/...` paths and the
 `dev-workflow:<skill>` skill names; keep both in sync when renaming or moving skills.

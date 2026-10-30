@@ -1,6 +1,6 @@
 ---
 name: plan-features
-description: Look for ideas and concrete features that would improve the project, aligned with the design docs named in USER_WORKFLOW.md, and record them with date/time stamps in CLAUDE_PLAN.md at the repo root, then commit that file. Ideas that conflict with the design docs are only added when exceptionally good (and allowed), clearly marked with the conflict and the reason. Use when the user asks for feature ideas, a brainstorm, a planning pass or suggestions for what to build next. Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
+description: Look for ideas and concrete features that would improve the project, aligned with the design docs named in USER_WORKFLOW.md, and record them in CLAUDE_PLAN.md, then commit that file. Nothing is built from it without the user's approval (/pitch-feature, /explore-feature). Use when the user asks for feature ideas, a brainstorm, a planning pass or suggestions for what to build next. Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
 ---
 
 # Feature planning pass
@@ -8,9 +8,9 @@ description: Look for ideas and concrete features that would improve the project
 `CLAUDE_PLAN.md` (repo root) is Claude's **running list** of ideas and concrete features
 that would make the project better. Every pass updates it. This skill only thinks and records:
 do not change project code. At the end it commits `CLAUDE_PLAN.md` (and nothing else).
-Items in this list are only built with the user's approval: pitched one at a time with
-`/pitch-feature`, or all at once with `/implement-all-claude-features` after the user confirms
-the run.
+Items in this list are only built with the user's approval: `/pitch-feature` pitches one
+(built right away or approved into `USER_PLAN.md`), `/explore-feature claude:<id>` works one
+out with the user and moves it to `USER_PLAN.md`.
 
 `USER_PLAN.md` is the user's own list with the same format. Read it but **never edit it**.
 
@@ -70,7 +70,11 @@ Keep its structure and follow `list-format.md` (entry formats, ids, stamps).
   **[HOLD]** as they are, apart from deleting them when they're done.
 - **New items:** `F<n>` in `Concrete features` (you could write the task list now), `I<n>` in
   `Ideas` (still need design work), ids from each section's `_Next id:_` line, counted up.
-- `## Dropped` is only written by `/pitch-feature`.
+  Concrete features use the full format of `list-format.md`: with **Done when:**, **Size**,
+  **Keep open for:** (ideas in either plan the implementation should not block) and
+  **Model:** when the rubric's pick differs from the default `features` model in
+  `USER_WORKFLOW.md` → `## Runs`. Prefer features of size S or M; split bigger ones.
+- `## Dropped` is only written by `/pitch-feature` and `/explore-feature`.
 - Add a line to the **Passes** list in the header:
   `- <date time TZ> at <commit>: <scope>, <n> new, <m> updated, <k> removed.`
 
@@ -90,5 +94,6 @@ Commit the updated list:
 
 In a few short paragraphs: how many items are new, updated and removed, the best new ones in
 plain words, any `[CONFLICT]` item and why you added it, the commit (with a scope suggestion
-if no scope fit), and which item you'd pitch first with `/pitch-feature`. Do not paste the
+if no scope fit), and which item you'd pitch first with `/pitch-feature` (or explore with
+`/explore-feature claude:<id>`, for an idea). Do not paste the
 whole file.

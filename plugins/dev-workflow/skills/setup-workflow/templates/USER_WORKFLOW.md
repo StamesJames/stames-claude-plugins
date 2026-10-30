@@ -1,7 +1,8 @@
 # Workflow
 
 How Claude's workflow skills (`/analyse-code`, `/fix-next-finding`, `/plan-features`,
-`/pitch-feature`, `/implement-next-feature` and their loops) should work in this project.
+`/explore-feature`, `/pitch-feature`, `/implement-next-feature`, `/review-change` and the
+loops `/fix-all-findings`, `/implement-all-features`) should work in this project.
 This file is yours: edit it by hand whenever you change your mind. Claude only edits it when
 you ask. Facts about the code (verification commands, code scope, invariants) live in
 `CLAUDE.md`, which Claude keeps current; list rules are in
@@ -48,6 +49,19 @@ Deliberate choices a pass should not report as problems.
 
 ---
 
+## Code standards
+
+What clean code means in this project. Every skill that writes code follows it, and
+`/analyse-code` and `/review-change` measure against it. Conventions already documented in
+`CLAUDE.md` don't need repeating.
+
+<!-- Short rules, project-specific. Examples: layering ("UI never touches the save format
+directly"), size limits, error-handling style, naming, what gets tests. -->
+- <rule>
+- Tests: new behaviour and bug fixes get tests where the project has a test suite.
+
+---
+
 ## Hands-off paths
 
 Never edited by any skill (vendored code, scratch files, assets you manage yourself). Not
@@ -59,11 +73,30 @@ reported as findings either.
 
 ## Ask before
 
-Changes the skills must not make without your OK (unattended runs skip such items and ask at
-the end). These add to the generic rules: big refactors, items marked "verify", design
-questions.
+Changes the skills must not make without your OK (runs ask about such items before they
+start, all at once). These add to the generic rules: big refactors, items marked "verify",
+design questions.
 
 - <kind of change>
+
+---
+
+## Runs
+
+Settings for `/fix-all-findings` and `/implement-all-features` (one fresh agent per item). An
+item's `**Model:**` line overrides the model for that item.
+
+- Models: triage `opus`, features `opus`, fixes `sonnet`, review `sonnet`, analysis `sonnet`
+  <!-- haiku | sonnet | opus | inherit (the session's model); add "reasoning <level>" after a
+  model to set its effort, e.g. `opus, reasoning high` -->
+- Escalate failed items to: `opus` <!-- retried once with this model before the item counts
+  as failed; `none` to turn off -->
+- Fresh review: features of size M or L, and any item whose diff has more than 150 changed
+  lines <!-- or `always`, `never` -->
+- Analyse after run: features yes, fixes no
+- Stop after consecutive failures: 3
+- Run branch: no <!-- yes: a run started on the default branch commits to
+  `workflow/<date>-<kind>` instead. Failed attempts always go to `workflow/failed/<item>`. -->
 
 ---
 
