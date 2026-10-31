@@ -9,6 +9,11 @@
       "name": "dev-workflow",
       "source": "./plugins/dev-workflow",
       "description": "Plan-first dev workflow: explore and plan features, analyse code quality, then implement or fix list items unattended with one fresh agent per item."
+    },
+    {
+      "name": "agent-context",
+      "source": "./plugins/agent-context",
+      "description": "Keep CLAUDE.md lean: tidy it under 200 lines by moving detail into path-scoped rules or on-demand CLAUDE_<TOPIC>.md files listed in a Context files index."
     }
   ]
 }

@@ -1,0 +1,10 @@
+{
+  "name": "agent-context",
+  "version": "1.0.0",
+  "license": "MIT",
+  "description": "Keep CLAUDE.md lean: tidy it under 200 lines by moving detail into path-scoped rules or on-demand CLAUDE_<TOPIC>.md files listed in a Context files index.",
+  "author": {
+    "name": "stames",
+    "email": "stames.video@gmail.com"
+  }
+}

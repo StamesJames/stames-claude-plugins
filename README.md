@@ -5,12 +5,14 @@ Personal Claude Code plugin marketplace.
 | Plugin | Description |
 | --- | --- |
 | [dev-workflow](plugins/dev-workflow) | Plan-first dev workflow: explore and plan features, analyse code quality, then implement or fix list items unattended with one fresh agent per item. |
+| [agent-context](plugins/agent-context) | Keep CLAUDE.md lean: tidy it under 200 lines by moving detail into path-scoped rules or on-demand `CLAUDE_<TOPIC>.md` files listed in a Context files index. |
 
 ## Install
 
 ```sh
 claude plugin marketplace add StamesJames/stames-claude-plugins
 claude plugin install dev-workflow@stames-plugins
+claude plugin install agent-context@stames-plugins
 ```
 
 Update later with `claude plugin marketplace update stames-plugins`.

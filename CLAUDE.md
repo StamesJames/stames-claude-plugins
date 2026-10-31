@@ -29,7 +29,7 @@ Adding a plugin: create `plugins/<name>/` with `.claude-plugin/plugin.json`, add
 
 ## The `dev-workflow` plugin
 
-The only plugin so far. Its skills share one workflow built around running list files at the
+Its skills share one workflow built around running list files at the
 root of the *target* project (not this repo): `CLAUDE_ANALYSIS.md`, `USER_ANALYSIS.md`,
 `CLAUDE_PLAN.md`, `USER_PLAN.md`, the user's `USER_WORKFLOW.md`, and a `## Workflow` section in
 the target's `CLAUDE.md`.
@@ -65,3 +65,12 @@ How the pieces fit:
 
 Cross-skill references use `${CLAUDE_PLUGIN_ROOT}/skills/...` paths and the
 `dev-workflow:<skill>` skill names; keep both in sync when renaming or moving skills.
+
+## The `agent-context` plugin
+
+One skill, `tidy-claude-md`, holding the whole convention: CLAUDE.md under 200 lines, path rules
+in `.claude/rules/`, on-demand `CLAUDE_<TOPIC>.md` files referenced (never `@`-imported) from a
+`## Context files` index. It only manages files in that index, so `dev-workflow`'s lists
+(`CLAUDE_ANALYSIS.md`, `CLAUDE_PLAN.md`) and its `## Workflow` section stay untouched; keep it
+that way if either plugin changes its file names or sections. Scope is CLAUDE.md and its linked
+files only, not skills or agent definitions.
