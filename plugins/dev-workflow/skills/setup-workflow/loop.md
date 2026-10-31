@@ -29,8 +29,11 @@ started again.
    - analyse after run: features yes, fixes no;
    - stop after 3 consecutive failures;
    - run branch: no.
-4. Count the open items from the headings only (`grep -n '^###' <lists>`), the held ones
-   separately. None besides held ones: say so and stop.
+4. Count the open items with `workflow-lists summary <lists>` (don't read the lists for
+   this): its `TOTAL:` line gives open and held items, its item lines the ids and line
+   numbers. None open besides held ones: say so and stop. Run `workflow-lists check <lists>`
+   too; errors in the lists go into the final report, and the run goes ahead unless they
+   make items unreadable.
 5. Note the branch (`git branch --show-current`) and `git rev-parse --short HEAD` as the
    start. If **run branch** is `yes` and the current branch is the default branch (`main`,
    `master`, or what `git symbolic-ref --short refs/remotes/origin/HEAD` names), create and
@@ -85,6 +88,7 @@ as `effort`.
      decision line names the branch and the earlier failure reason
      (`Retry from scratch; earlier attempt on `workflow/failed/...` failed: <reason>`).
 
+   Run `workflow-lists check <the lists you edited>` and fix every `error` in your edits.
    Commit the list files you edited (by explicit path; type `chore`,
    `chore: record run decisions for <ids>`, no `Refs:` footer, scope per `list-format.md`).
 4. **Queue:** GONE items first (the single-item skill confirms and deletes them), then
@@ -158,7 +162,8 @@ A failure never stops the run on its own; the attempt is saved and the run moves
    start from the current code." If that succeeds, delete the saved branch (`git branch -D`)
    and continue as for `DONE`. If it fails, save that attempt as well (1).
 3. **Record the failure.** Add the `_Failed:_` stamp from `list-format.md` to the entry
-   (naming the last saved branch, the model and the reason) and commit the list file
+   (naming the last saved branch, the model and the reason; time from
+   `workflow-lists stamp`) and commit the list file
    (`chore: record failed attempt at <id>`, no `Refs:` footer). Add the id to `failed` and
    `skip`, count up `consecutive_failures`, and stop the run when it reaches the limit from
    `## Runs` (something is probably wrong beyond a single item).
@@ -191,6 +196,8 @@ Short:
 - reviews that made changes;
 - the after-run analysis (new findings, suggesting `/fix-all-findings`);
 - the collected `SCOPE:` lines (scopes to add to `USER_WORKFLOW.md`);
-- missing `## Runs` settings, if defaults were used.
+- missing `## Runs` settings, if defaults were used;
+- the `error` lines of a final `workflow-lists check <lists>`, if any (a single-item agent
+  left a list broken).
 
 Remind the user that nothing was pushed.

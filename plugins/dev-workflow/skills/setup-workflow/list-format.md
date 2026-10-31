@@ -26,6 +26,30 @@ newer than `CLAUDE.md`; if they disagree, check the code.
 
 Templates for every file are in the `templates/` directory next to this file.
 
+## The `workflow-lists` command
+
+The plugin puts `workflow-lists` on the Bash tool's `PATH`. Run it from the repo root; it
+prints a few lines, so use it instead of reading whole lists to check or count them:
+
+- `workflow-lists check [<list file>...]`: checks the mechanical rules below (sections,
+  `_Next id:_` lines, ids, `_No open items._`, severities, stamps, `**Model:**` lines,
+  required fields of Claude's entries, `**Keep open for:**` and suggested-order references,
+  `workflow/failed/...` branches, outdated headers; with no file also `CLAUDE.md`'s
+  `## Workflow` section and `USER_WORKFLOW.md` against its template). It prints `OK: …`, or
+  one `error` / `warn` line per problem and exits 1 if there are errors. Run it after editing a
+  list and before committing, and fix every `error` in what you changed. `warn` lines in the
+  user's own entries are the user's to fix: mention them, don't edit those entries.
+- `workflow-lists summary [--ideas] [<list file>...]`: one line per open item (id as used
+  outside the files, tags, title, line number, size, model, decisions, failed branch), held
+  items included and tagged, ideas only with `--ideas`, and a `TOTAL:` line.
+- `workflow-lists stamp`: the stamp value, `YYYY-MM-DD HH:MM TZ (`commit`)`.
+
+A hook also runs the check after every edit to a list file and reports errors in that file
+(including references into it that the edit left dangling). If you are mid-change (an entry
+deleted, its mentions not yet), finish the change; otherwise fix what it reports.
+
+If the command is missing (`command not found`), do these steps by hand from the rules below.
+
 ## Rules for all four lists
 
 - **Running lists of open items only.** Never start a list from scratch; update it.
@@ -40,9 +64,9 @@ Templates for every file are in the `templates/` directory next to this file.
   search the git history for ids.
 - A section left without items gets back its `_No open items._` line.
 - **Stamps:** `_Found: YYYY-MM-DD HH:MM TZ (`<short commit>`)_` (analysis) or `_Written: …_`
-  (plans). Take the values from `date '+%Y-%m-%d %H:%M %Z'` and `git rev-parse --short HEAD`
-  (`no commit` if the repo has none yet); never guess the time. Keep the stamps of other
-  entries as they are.
+  (plans). Take the value from `workflow-lists stamp` (by hand: `date '+%Y-%m-%d %H:%M %Z'`
+  and `git rev-parse --short HEAD`, `no commit` if the repo has none yet); never guess the
+  time. Keep the stamps of other entries as they are.
 - **[HOLD]** after the severity: the item is not touched (fixed, implemented, pitched) until
   the user removes the tag, even when named explicitly. Held items are not "blocked" and don't
   count as open for `NOTHING_LEFT`. A pass may still delete a held item that turns out done.

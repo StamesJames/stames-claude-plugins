@@ -1,6 +1,6 @@
 {
   "name": "dev-workflow",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "license": "MIT",
   "description": "Plan-first dev workflow: explore and plan features, analyse code quality, then implement or fix list items unattended with one fresh agent per item.",
   "author": {

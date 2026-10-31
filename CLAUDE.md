@@ -62,6 +62,12 @@ How the pieces fit:
   it into `USER_PLAN.md`, `explore-feature` works items out with the user and writes them to
   `USER_PLAN.md`. Only `USER_PLAN.md` concrete features are implemented by the loops.
 - `review-change` and `analyse-code since=<commit>` are also run by the loops, unattended.
+- **`bin/workflow-lists`** (Python 3, stdlib only) checks the mechanical part of
+  `list-format.md` (`check`), summarises open items (`summary`) and prints stamps (`stamp`);
+  `hooks/hooks.json` runs `workflow-lists hook` after `Write`/`Edit` of a list file. When a
+  list rule, section name, entry field, template or `USER_WORKFLOW.md` → `## Runs` setting
+  changes, update the script too (it reads the `USER_WORKFLOW.md` template itself), then
+  run `workflow-lists check` against fresh templates in a scratch git repo: it must print `OK`.
 
 Cross-skill references use `${CLAUDE_PLUGIN_ROOT}/skills/...` paths and the
 `dev-workflow:<skill>` skill names; keep both in sync when renaming or moving skills.

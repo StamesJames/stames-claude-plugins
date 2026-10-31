@@ -22,7 +22,7 @@ from both plans as options.
    `USER_WORKFLOW.md` (design docs, code standards, `## Runs` for the default `features`
    model), `USER_PLAN.md` and `CLAUDE_PLAN.md` (to avoid duplicates; the **Dropped** section
    lists what the user turned down).
-3. Run `date '+%Y-%m-%d %H:%M %Z'` and `git rev-parse --short HEAD` for the stamps.
+3. Run `workflow-lists stamp` for the stamps.
 4. Read the parts of the design docs and the code the feature would touch: what exists, where
    it would plug in, what constrains it. Stay read-only.
 
@@ -71,7 +71,8 @@ question if none was given). For a user idea, delete it only if the user says so
 
 ## 4. Commit
 
-Stage only the plan files you edited, by explicit path (if one had uncommitted edits before,
+Run `workflow-lists check USER_PLAN.md CLAUDE_PLAN.md` and fix every `error` it reports in
+what you changed. Stage only the plan files you edited, by explicit path (if one had uncommitted edits before,
 say they are included). Message per `USER_WORKFLOW.md` → `## Commits`, type `chore`, e.g.
 `chore: plan undo of last move (F7, F8)`; no `Refs:` footer. Scope per "Scope reporting" in
 `list-format.md`. End with the attribution lines from the system reminder.

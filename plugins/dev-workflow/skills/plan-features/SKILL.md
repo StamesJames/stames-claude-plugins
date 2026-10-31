@@ -21,8 +21,8 @@ sources). Without one, look at the whole project.
 
 1. If `USER_WORKFLOW.md` is missing, tell the user to run `/setup-workflow` and stop.
 2. Read `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md`.
-3. Run `date '+%Y-%m-%d %H:%M %Z'` and `git rev-parse --short HEAD`. Every stamp written in this
-   pass uses exactly these values.
+3. Run `workflow-lists stamp`. Every stamp written in this pass uses exactly this value
+   (and the **Passes** line its date, time and commit).
 4. Read `USER_WORKFLOW.md`: the **Design docs** (and whether conflicting ideas are allowed)
    and the **Idea sources**. Then read **all the design docs** it names. They are the intent,
    and the yardstick for every idea. Note what they plan that does not exist yet. If the
@@ -77,6 +77,7 @@ Keep its structure and follow `list-format.md` (entry formats, ids, stamps).
 - `## Dropped` is only written by `/pitch-feature` and `/explore-feature`.
 - Add a line to the **Passes** list in the header:
   `- <date time TZ> at <commit>: <scope>, <n> new, <m> updated, <k> removed.`
+- Run `workflow-lists check CLAUDE_PLAN.md` and fix every `error` it reports.
 
 ## 4. Commit
 

@@ -103,6 +103,8 @@ done.
   with an `_Updated:_` stamp when partly done. Leave other entries exactly as they are. Don't
   add a line to a **Passes** list.
 - If the deleted entry names `workflow/failed/...` branches, delete them (`git branch -D`).
+- Run `workflow-lists check <the list file>` and fix every `error` it reports in what you
+  changed (an `_Updated:_` stamp takes its value from `workflow-lists stamp`).
 - If the change alters something `CLAUDE.md` describes (architecture, flows, conventions,
   commands, the Workflow section), update `CLAUDE.md` in the same change. If it settles
   something the design docs leave open, mention it in the report; don't edit the design docs

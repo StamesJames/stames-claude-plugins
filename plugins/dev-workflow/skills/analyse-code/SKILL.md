@@ -27,8 +27,8 @@ longer exists (`git cat-file -e <commit>` fails, e.g. after a rebase), it is `fu
    to run `/setup-workflow` and stop.
 2. Read `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md`: the list format and
    rules.
-3. Run `date '+%Y-%m-%d %H:%M %Z'` and `git rev-parse --short HEAD`. Every stamp written in this
-   pass uses exactly these values.
+3. Run `workflow-lists stamp`. Every stamp written in this pass uses exactly this value
+   (and the **Passes** line its date, time and commit).
 4. Read `CLAUDE.md` (its `## Workflow` section gives the code scope and verification),
    `USER_WORKFLOW.md` (analysis focus, things not to flag, code standards, hands-off paths,
    `## Runs` for the default `fixes` model), the current `CLAUDE_ANALYSIS.md` and the user's
@@ -101,6 +101,7 @@ Keep its structure and follow `list-format.md`.
 - Add a line to the **Passes** list in the header: `- <date time TZ> at <commit>: <mode and
   scope>, <n> new, <m> fixed.` (mode: `full`, `since <commit>`, or the focus).
 - Rewrite section 4 (suggested order) so it reflects the open items.
+- Run `workflow-lists check CLAUDE_ANALYSIS.md` and fix every `error` it reports.
 
 ## 5. Commit
 

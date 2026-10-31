@@ -75,6 +75,7 @@ configs and conventions you found) and say so instead of asking about each.
   existing list file**; if one exists, leave it and check it in B.3 instead.
 - `CLAUDE.md`: add the `## Workflow` section (before `## Architecture` or similar if the file
   has one, otherwise at the end). If a section with the same purpose exists, merge into it.
+- Run `workflow-lists check` and fix what it reports in the files you wrote.
 
 ### A.4 Migrating an older, project-specific form
 
@@ -103,22 +104,25 @@ suggested commit message (`chore(workflow): set up workflow lists` or per the pr
 
 ## B. Check
 
-1. Read `USER_WORKFLOW.md`, the `## Workflow` section of `CLAUDE.md` and the headers of the
-   four list files. Compare `USER_WORKFLOW.md` with the current template: report sections the
-   template has and the file lacks (the template may have grown).
+1. Run `workflow-lists check`. It covers the list files (missing files, sections,
+   `_Next id:_` lines, ids, stamps, references, outdated headers naming old skill paths or
+   removed skills, `workflow/failed/...` branches), the `## Workflow` section of `CLAUDE.md`
+   (subsections, old names) and `USER_WORKFLOW.md` against the current template (missing
+   sections and `## Runs` settings). Don't re-check by hand what it covers. Then read
+   `USER_WORKFLOW.md` and the `## Workflow` section of `CLAUDE.md` for step 2; read the lists
+   only where the check reports something.
 2. Check the configuration against the project:
    - paths in design docs, hands-off, code scope that no longer exist, and new top-level
      directories that none of them covers;
    - verification commands that fail, are missing, or no longer match the build/test setup
      (run the cheap ones);
    - scopes that match no area any more, and areas that recent commits (`git log -50`) or the
-     code show without a scope;
-   - list files that are missing, lack `_Next id:_` lines, or have headers pointing to old
-     skill paths or naming skills that no longer exist (`/fix-next-user-finding`,
-     `/fix-all-user-findings`, `/implement-all-claude-features`: now `user-only` arguments,
-     and `CLAUDE_PLAN.md` items are approved into `USER_PLAN.md`); the same for the
-     `## Workflow` section of `CLAUDE.md`.
+     code show without a scope.
 3. Fix facts directly: the `## Workflow` section in `CLAUDE.md`, missing list files (from the
-   templates), list headers. For `USER_WORKFLOW.md`, **propose** the changes and apply only
-   those the user approves (`AskUserQuestion`, multi-select where it fits).
-4. Report what you changed, what you proposed and what was approved. Don't commit.
+   templates), list headers, and the check's `error` lines in Claude's lists. In the user's
+   lists, fix only structure (`_Next id:_`, `_No open items._`, headers, dangling
+   references) and leave their entries' wording, stamps and severities to the user. For
+   `USER_WORKFLOW.md`, **propose** the changes and apply only those the user approves
+   (`AskUserQuestion`, multi-select where it fits). Run `workflow-lists check` again at the end.
+4. Report what you changed, what you proposed and what was approved, and the remaining
+   `warn` lines from the check. Don't commit.

@@ -79,10 +79,11 @@ Follow **sections C to G of `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/work-it
 ## 5. Approve for later
 
 Move the entry to `USER_PLAN.md` → `## Concrete features` with a new id from its `_Next id:_`
-line and a fresh `_Written:_` stamp. Keep its text, add a **Done when:** if it has none
+line and a fresh `_Written:_` stamp (`workflow-lists stamp`). Keep its text, add a **Done when:** if it has none
 (derived from **What**, shown to the user in the report), and add the answers to the pitch's
 decisions as **Decisions:**. Delete it from `CLAUDE_PLAN.md` and update references to the old
-id (**Keep open for:** lines, other items) in both plans. Commit both plan files (type
+id (**Keep open for:** lines, other items) in both plans. Run
+`workflow-lists check USER_PLAN.md CLAUDE_PLAN.md` and fix every `error` it reports. Commit both plan files (type
 `chore`, e.g. `chore: approve pause menu sound for the plan (F9)`, no `Refs:` footer).
 
 ## 6. Report back
