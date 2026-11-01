@@ -21,6 +21,7 @@ Update later with `claude plugin marketplace update stames-plugins`.
 
 1. Create `plugins/<name>/` with `.claude-plugin/plugin.json` (same `name`) and its components.
 2. Add an entry to `.claude-plugin/marketplace.json` with `"source": "./plugins/<name>"`.
-3. Run `claude plugin validate .` and `claude plugin validate plugins/<name>`.
+3. Add a row to the table above.
+4. Run `claude plugin validate .` and `claude plugin validate plugins/<name>`.
 
 Bump `version` in a plugin's `plugin.json` whenever you change it, so installs pick up the update.

@@ -33,20 +33,10 @@ _No open items._
 
 _Next id: 3.7_
 
-### 3.6 [L] Root README's "Adding a plugin" steps miss the table row
-_Found: 2026-11-01 08:36 CET (`78d25f9`)_
-
-`README.md:20-24`
-
-`CLAUDE.md` says adding a plugin includes adding a row to the table in `README.md`; the
-README's own numbered steps don't mention it, so following them leaves the plugin unlisted.
-
-**Fix:** add the step ("Add a row to the table above") between steps 2 and 3.
-
-**Model:** haiku
+_No open items._
 
 ---
 
 ## 4. Suggested order of work
 
-1. **3.6**: README, docs only.
+_No open items._
