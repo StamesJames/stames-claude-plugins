@@ -33,21 +33,6 @@ _No open items._
 
 _Next id: 3.7_
 
-### 3.4 [L] `analyse-code` is ambiguous about splitting a small `full` scope
-_Found: 2026-11-01 08:36 CET (`78d25f9`)_
-
-`plugins/dev-workflow/skills/analyse-code/SKILL.md:3`, `analyse-code/SKILL.md:52-56`
-
-The description says `full` analyses "with one subagent per area"; the body says "For `full`
-(or any scope too large …, roughly more than 40 files or 8000 lines)", which reads both as
-"always split `full`" and as "split `full` only above the threshold". In a small repo like
-this one (30 files) a pass has to guess.
-
-**Fix:** state the rule once, e.g. "Split when the scope is above roughly 40 files or 8000
-lines (usual for `full`); smaller scopes are read directly", and match the description.
-
-**Model:** haiku
-
 ### 3.5 [L] Long unwrapped prose lines in rule files and templates
 _Found: 2026-11-01 08:36 CET (`78d25f9`)_
 
@@ -85,5 +70,4 @@ README's own numbered steps don't mention it, so following them leaves the plugi
 
 ## 4. Suggested order of work
 
-1. **3.4**.
-2. **3.5** together with **3.6**: wrapping and README, docs only.
+1. **3.5** together with **3.6**: wrapping and README, docs only.

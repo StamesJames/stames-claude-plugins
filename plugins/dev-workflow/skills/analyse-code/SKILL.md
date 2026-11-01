@@ -1,6 +1,6 @@
 ---
 name: analyse-code
-description: Run a cleanup analysis pass looking for bugs, unclean code and performance problems, and record the findings in CLAUDE_ANALYSIS.md, then commit that file. By default only what changed since the last pass; `full` analyses the whole project with one subagent per area. Use when the user asks for a code analysis, cleanup round, audit or review of the project (not of a single diff). Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
+description: Run a cleanup analysis pass looking for bugs, unclean code and performance problems, and record the findings in CLAUDE_ANALYSIS.md, then commit that file. By default only what changed since the last pass; `full` analyses the whole project (split across one subagent per area when it is large). Use when the user asks for a code analysis, cleanup round, audit or review of the project (not of a single diff). Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
 ---
 
 # Code analysis pass
@@ -49,8 +49,9 @@ longer exists (`git cat-file -e <commit>` fails, e.g. after a rebase), it is `fu
 
 Always skip generated code and the hands-off paths from `USER_WORKFLOW.md`.
 
-**Large scopes are split.** For `full` (or any scope too large to read well in one context,
-roughly more than 40 files or 8000 lines), map the scope to the project's areas (the
+**Large scopes are split.** A scope above roughly 40 files or 8000 lines is split (the usual
+case for `full`); a smaller one, even a small `full`, is read directly in one context. For a
+split, map the scope to the project's areas (the
 `### Scopes` in `USER_WORKFLOW.md`; split big areas, merge tiny ones, 3–8 parts) and spawn one
 `general-purpose` subagent per part (model `analysis` from `## Runs`; omit for `inherit`),
 in parallel, with this prompt:
