@@ -15,7 +15,18 @@ claude plugin install dev-workflow@stames-plugins
 claude plugin install agent-context@stames-plugins
 ```
 
-Update later with `claude plugin marketplace update stames-plugins`.
+## Update
+
+```sh
+claude plugin marketplace update stames-plugins   # fetch the latest marketplace catalog
+claude plugin update dev-workflow@stames-plugins  # update each installed plugin
+claude plugin update agent-context@stames-plugins
+```
+
+Refresh the marketplace first, because `plugin update` only sees versions the local catalog
+knows about. A plugin only updates when its `version` in `plugin.json` has been bumped.
+Restart Claude Code afterwards to load the new version. If you installed a plugin with
+`--scope project` or `--scope local`, pass the same `--scope` to `plugin update`.
 
 ## Adding a plugin
 
