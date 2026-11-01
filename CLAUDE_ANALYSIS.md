@@ -56,6 +56,8 @@ drops "the weakest", which is undefined; an unattended orchestrator may drop `Dr
 2.2, name the option that gives way for `_Failed:_` items (e.g. `Drop it`, still reachable
 through "Other"), or fold `Skip this run` into the failed-item option set explicitly.
 
+**Decisions:** For `_Failed:_` items, `Drop it` gives way to `Skip this run` (still reachable through "Other"); remove `Skip it` from `fix-all-findings`. (2026-11-01)
+
 ### 1.3 [M] `loop.md` hands literal `${CLAUDE_PLUGIN_ROOT}` paths to subagents
 _Found: 2026-11-01 08:36 CET (`78d25f9`)_
 
@@ -75,6 +77,8 @@ and 7 have the same problem. `plan-features`' per-idea `Plan` subagents are told
 the plugin root (two directories above this file) before sending a prompt. In
 `plan-features`, give the subagents the full `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md`
 path (substituted there, since it is a SKILL.md).
+
+**Decisions:** Investigate and fix if confirmed (triage confirmed `$CLAUDE_PLUGIN_ROOT` is empty in Bash). (2026-11-01)
 
 ### 1.4 [L] No defined result when the given id's entry no longer exists
 _Found: 2026-11-01 08:36 CET (`78d25f9`)_
@@ -150,6 +154,8 @@ also accepts `max`. A rule and its check should agree.
 `EFFORTS`.
 
 **Model:** haiku
+
+**Decisions:** No `max`: remove it from `EFFORTS` in `bin/workflow-lists`. (2026-11-01)
 
 ### 3.3 [L] `implement-all-features` repeats a final-report rule from `loop.md`
 _Found: 2026-11-01 08:36 CET (`78d25f9`)_
