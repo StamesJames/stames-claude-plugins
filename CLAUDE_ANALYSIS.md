@@ -17,26 +17,6 @@ Legend: **[H]** high — fix before building more on top, **[M]** medium, **[L]*
 
 _Next id: 1.6_
 
-### 1.1 [M] A failed attempt that left no changes can't be recorded
-_Found: 2026-11-01 08:36 CET (`78d25f9`)_
-
-`plugins/dev-workflow/skills/setup-workflow/loop.md:146-169`, `loop.md:73-74`,
-`plugins/dev-workflow/skills/setup-workflow/list-format.md:92-96`,
-`plugins/dev-workflow/bin/workflow-lists:70-72`, `bin/workflow-lists:517-519`
-
-Section 5 saves the attempt on a WIP branch only "if the tree has changes", but step 3 must
-write a `_Failed:_` stamp "naming the last saved branch", and both the format in
-`list-format.md` and `FAILED_RE` require a `workflow/failed/...` branch (the check also errors
-if it doesn't exist). Scenario: an item agent hits a limit or errors out before editing and
-returns no `RESULT:` line. The tree is clean, no branch is saved, the escalation prompt
-(step 2) points to a branch that doesn't exist, and the orchestrator can only write an invalid
-stamp or invent a branch. The next triage then offers `Continue from the WIP branch` for it.
-
-**Fix:** allow a `_Failed:_` stamp without a branch (e.g. `(no changes, <model>)`) in
-`list-format.md` and `FAILED_RE`; in `loop.md` section 5 say what to write when nothing was
-saved, drop the branch sentence from the escalation prompt then, and offer
-`Continue from the WIP branch` in triage only when the stamp names one. Run the smoke test.
-
 ### 1.2 [M] Decision step: duplicate skip options, and `Skip it` has no recording rule
 _Found: 2026-11-01 08:36 CET (`78d25f9`)_
 
@@ -222,8 +202,7 @@ README's own numbered steps don't mention it, so following them leaves the plugi
 
 ## 4. Suggested order of work
 
-1. **1.1** together with **1.2**: both are in the failure/decision path of `loop.md`; one
-   change keeps the triage options and recording rules consistent.
+1. **1.2**: in the decision path of `loop.md` and `fix-all-findings`.
 2. **1.3**: one line in `loop.md` plus a path in `plan-features`.
 3. **1.4** together with **3.1** and **3.3**: small wording fixes in `loop.md`,
    `work-item.md` and the loop skills.

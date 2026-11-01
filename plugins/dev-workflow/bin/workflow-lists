@@ -68,7 +68,7 @@ STAMP_RE = {
 }
 UPDATED_RE = re.compile(rf"^_Updated: {DATE} \({COMMIT}\)_$")
 FAILED_RE = re.compile(
-    rf"^_Failed: {DATE} \(`?(?P<branch>workflow/failed/[^`,\s]+)`?, [^)]+\): .+_$"
+    rf"^_Failed: {DATE} \((?:`?(?P<branch>workflow/failed/[^`,\s]+)`?|no changes), [^)]+\): .+_$"
 )
 MODEL_RE = re.compile(r"^\*\*Model:\*\* `?[\w.:-]+`?(?:, reasoning (?P<effort>\w+))?\s*$")
 NEXT_ID_RE = re.compile(r"^_Next id: (?P<id>\S+?)_\s*$")
@@ -389,7 +389,7 @@ def check_entry(lf, it, probs):
         if t.startswith("_Updated:") and not UPDATED_RE.match(t):
             probs.add("error", name, n, f"{it.ref}: `_Updated:_` should read `_Updated: YYYY-MM-DD HH:MM TZ (`commit`)_`")
         if t.startswith("_Failed:") and not FAILED_RE.match(t):
-            probs.add("error", name, n, f"{it.ref}: `_Failed:_` should read `_Failed: <date time TZ> (`workflow/failed/...`, <model>): <reason>_`")
+            probs.add("error", name, n, f"{it.ref}: `_Failed:_` should read `_Failed: <date time TZ> (`workflow/failed/...` or no changes, <model>): <reason>_`")
         if t.startswith("**Model:**"):
             m = MODEL_RE.match(t)
             if not m:
@@ -515,7 +515,7 @@ def check_branches(root, lists, probs):
             for n, t in it.body:
                 t = t.strip()
                 fm = FAILED_RE.match(t)
-                if fm and fm.group("branch") not in branches:
+                if fm and fm.group("branch") and fm.group("branch") not in branches:
                     probs.add("error", lf.name, n, f"{it.ref}: `_Failed:_` names branch {fm.group('branch')}, which doesn't exist")
                 elif not fm:
                     for m in BRANCH_RE.finditer(t):
@@ -661,7 +661,7 @@ def describe(it):
     for _, t in it.body:
         m = FAILED_RE.match(t.strip())
         if m:
-            parts.append(f"FAILED ({m.group('branch')})")
+            parts.append(f"FAILED ({m.group('branch') or 'no changes'})")
     if any(t.strip().startswith("_Updated:") for _, t in it.body):
         parts.append("updated")
     head = " ".join([it.ref, *(f"[{t}]" for t in it.tags), it.title])

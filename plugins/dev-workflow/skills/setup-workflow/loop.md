@@ -71,7 +71,8 @@ as `effort`.
    > `GONE: <id> — <why>`
    >
    > For a `_Failed:_` item the only question is `How to continue with <id>?` with the options
-   > `Retry from scratch`, `Continue from the WIP branch`, `Put on hold`, `Drop it`.
+   > `Retry from scratch`, `Continue from the WIP branch`, `Put on hold`, `Drop it`
+   (`Continue from the WIP branch` only if the stamp names a branch).
 
 2. **Ask.** If there are DECIDE items, show the user each one in two lines (id, title,
    approach), then ask their questions with `AskUserQuestion`, up to four questions per call,
@@ -159,10 +160,11 @@ A failure never stops the run on its own; the attempt is saved and the run moves
    it and the item wasn't escalated yet: run step 3 again for this id with that model,
    appending to the prompt: "An earlier attempt with <model> failed: <reason>. Its changes
    are on branch `<branch>` (`git diff <run branch>...<branch>`); use them if helpful, but
-   start from the current code." If that succeeds, delete the saved branch (`git branch -D`)
+   start from the current code." (If step 1 saved nothing, leave out the branch sentence.) If that succeeds, delete the saved branch (`git branch -D`)
    and continue as for `DONE`. If it fails, save that attempt as well (1).
 3. **Record the failure.** Add the `_Failed:_` stamp from `list-format.md` to the entry
-   (naming the last saved branch, the model and the reason; time from
+   (naming the last saved branch, or `no changes` if none was saved, the model and the
+   reason; time from
    `workflow-lists stamp`) and commit the list file
    (`chore: record failed attempt at <id>`, no `Refs:` footer). Add the id to `failed` and
    `skip`, count up `consecutive_failures`, and stop the run when it reaches the limit from

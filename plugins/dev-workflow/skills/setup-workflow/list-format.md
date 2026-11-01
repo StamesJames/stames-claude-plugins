@@ -91,9 +91,10 @@ These may appear in any entry, right before the closing text or at its end:
   accepts); levels: `low`, `medium`, `high`, `xhigh`.
 - `_Failed: <date time TZ> (`<wip branch>`, <model>): <one-line reason>_` under the
   `_Found:_` / `_Written:_` line: a run tried the item and failed; the attempt is saved on the
-  named branch. Written only by `loop.md`. Such an item needs the user's decision before the
+  named branch. If the attempt left no changes to save, write `(no changes, <model>)` instead
+  of the branch. Written only by `loop.md`. Such an item needs the user's decision before the
   next run touches it; the decision step turns the stamp into a `**Decisions:**` line that
-  still names the branch.
+  still names the branch (if any).
 
 When an entry is deleted as done, also delete the `workflow/failed/...` branches it names
 (`git branch -D`), in the same run.
