@@ -55,7 +55,7 @@ as `effort`.
    > Read `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md`, sections A and B of
    > `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/work-item.md`, `CLAUDE.md`,
    > `USER_WORKFLOW.md` and <lists>. Consider every open item <of the given ids> that is not
-   > tagged [HOLD], not in `skip=<ids>`, and not in an `## Ideas` section. For each, check it
+   > tagged [HOLD] and not in `skip=<ids>`. For each, check it
    > against the current code only as deeply as needed to classify it: READY (workable
    > unattended, including items whose **Decisions:** cover their open questions), DECIDE
    > (needs the user per section B, plus: <skill's cases>; every item with a `_Failed:_`
@@ -127,7 +127,7 @@ as `effort`.
 ## 4. Review
 
 Decide from `## Runs` → **fresh review** whether the item gets one: its triage size, and the
-changed lines of `git diff --shortstat <before>..HEAD -- . ':!*_PLAN.md' ':!*_ANALYSIS.md'`.
+changed lines of `git diff --shortstat <before>..HEAD -- . ':!*_PLAN.md' ':!*_IDEAS.md' ':!*_ANALYSIS.md'`.
 If it does, spawn a `general-purpose` subagent (model `review`), description `Review <id>`:
 
 > You are working in the repo at the current directory, unattended. Invoke the

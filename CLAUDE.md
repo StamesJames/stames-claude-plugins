@@ -31,8 +31,8 @@ Adding a plugin: create `plugins/<name>/` with `.claude-plugin/plugin.json`, add
 
 Its skills share one workflow built around running list files at the
 root of the *target* project (not this repo): `CLAUDE_ANALYSIS.md`, `USER_ANALYSIS.md`,
-`CLAUDE_PLAN.md`, `USER_PLAN.md`, the user's `USER_WORKFLOW.md`, and a `## Workflow` section in
-the target's `CLAUDE.md`.
+`USER_IDEAS.md`, `CLAUDE_IDEAS.md`, `CLAUDE_PLAN.md`, the user's `USER_WORKFLOW.md`, and a
+`## Workflow` section in the target's `CLAUDE.md`.
 
 How the pieces fit:
 
@@ -43,14 +43,14 @@ How the pieces fit:
     lines, model rubric, `Refs:` footers, scope reporting).
   - `work-item.md`: the steps for one item (sections A–H: modes, needs-the-user check,
     build, self-review, verify, update list, commit, report and `RESULT:` lines). Its section
-    letters are referenced by `fix-next-finding`, `implement-next-feature` and
-    `pitch-feature`; keep them stable or update those skills.
+    letters are referenced by `fix-next-finding` and `implement-next-feature`; keep them
+    stable or update those skills.
   - `loop.md`: the run protocol (up-front triage and decisions, one subagent per item,
     review subagent, failure handling with WIP branches and model escalation, after-run
     analysis). Changing `work-item.md`'s `RESULT:` lines or arguments, or `review-change` /
     `analyse-code` result lines, means updating `loop.md` too.
 - `skills/setup-workflow/templates/` holds the templates `/setup-workflow` copies into a target
-  project (the four lists, `USER_WORKFLOW.md`, and `claude-md-section.md` for the target's
+  project (the five lists, `USER_WORKFLOW.md`, and `claude-md-section.md` for the target's
   `CLAUDE.md`). If a rule or section changes, check whether the templates and the "Check" mode
   of `setup-workflow/SKILL.md` need the same change.
 - **Single-item skills** (`fix-next-finding`, `implement-next-feature`) only hold what is
@@ -58,9 +58,14 @@ How the pieces fit:
   `work-item.md`. `user-only` restricts the fix skills to `USER_ANALYSIS.md`.
 - **Loop skills** (`fix-all-findings`, `implement-all-features`) are a few specifics on top of
   `loop.md`. They never touch code.
-- `CLAUDE_PLAN.md` is never worked off directly: `pitch-feature` builds one item or approves
-  it into `USER_PLAN.md`, `explore-feature` works items out with the user and writes them to
-  `USER_PLAN.md`. Only `USER_PLAN.md` concrete features are implemented by the loops.
+- **Feature flow:** the user writes ideas (as vague as they like) in `USER_IDEAS.md`;
+  `plan-features` asks the open questions and writes concrete features into `CLAUDE_PLAN.md`
+  (an entry there is approved for building) and deletes the planned ideas; only
+  `CLAUDE_PLAN.md` is implemented. Claude's own ideas go to `CLAUDE_IDEAS.md`
+  (`suggest-features`) and reach the plan only through `pitch-feature` (moves one into
+  `USER_IDEAS.md`) or an explicit `plan-features claude:I<n>`. Ideas are never work.
+- `setup-workflow` section C migrates the pre-3.0 layout (`USER_PLAN.md`); `workflow-lists`
+  flags that layout. Keep both if the list layout changes again.
 - `review-change` and `analyse-code since=<commit>` are also run by the loops, unattended.
 - **`bin/workflow-lists`** (Python 3, stdlib only) checks the mechanical part of
   `list-format.md` (`check`), summarises open items (`summary`) and prints stamps (`stamp`);
@@ -77,6 +82,6 @@ Cross-skill references use `${CLAUDE_PLUGIN_ROOT}/skills/...` paths and the
 One skill, `tidy-claude-md`, holding the whole convention: CLAUDE.md under 200 lines, path rules
 in `.claude/rules/`, on-demand `CLAUDE_<TOPIC>.md` files referenced (never `@`-imported) from a
 `## Context files` index. It only manages files in that index, so `dev-workflow`'s lists
-(`CLAUDE_ANALYSIS.md`, `CLAUDE_PLAN.md`) and its `## Workflow` section stay untouched; keep it
+(`CLAUDE_ANALYSIS.md`, `CLAUDE_PLAN.md`, `CLAUDE_IDEAS.md`) and its `## Workflow` section stay untouched; keep it
 that way if either plugin changes its file names or sections. Scope is CLAUDE.md and its linked
 files only, not skills or agent definitions.

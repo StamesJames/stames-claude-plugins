@@ -1,100 +1,130 @@
 ---
 name: plan-features
-description: Look for ideas and concrete features that would improve the project, aligned with the design docs named in USER_WORKFLOW.md, and record them in CLAUDE_PLAN.md, then commit that file. Nothing is built from it without the user's approval (/pitch-feature, /explore-feature). Use when the user asks for feature ideas, a brainstorm, a planning pass or suggestions for what to build next. Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
+description: Turn the user's feature ideas from USER_IDEAS.md (all open ones, given ids, a free-text wish, or an approved claude:I idea) into concrete, buildable features in CLAUDE_PLAN.md - explore the code, ask the user the open questions up front, write the features with their decisions, delete the planned ideas and commit. Also sharpens an existing CLAUDE_PLAN.md feature (F3). Use when the user asks to plan their ideas, plan or spec out a feature, turn ideas into features, or prepare the plan for /implement-all-features. Never changes project code. Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
 ---
 
-# Feature planning pass
+# Plan features from ideas
 
-`CLAUDE_PLAN.md` (repo root) is Claude's **running list** of ideas and concrete features
-that would make the project better. Every pass updates it. This skill only thinks and records:
-do not change project code. At the end it commits `CLAUDE_PLAN.md` (and nothing else).
-Items in this list are only built with the user's approval: `/pitch-feature` pitches one
-(built right away or approved into `USER_PLAN.md`), `/explore-feature claude:<id>` works one
-out with the user and moves it to `USER_PLAN.md`.
+The user writes ideas in `USER_IDEAS.md`, as short and vague as they like. This skill turns
+them into entries in `CLAUDE_PLAN.md` so clear that `/implement-all-features` can build them
+without asking anything: every behaviour decided, a **Done when:** the user agreed to, and a
+size an agent can do in one go. Writing an entry into `CLAUDE_PLAN.md` is the user's approval
+to build it, so every entry goes past the user before it is written. This skill only explores
+and writes list entries; it never changes project code.
 
-`USER_PLAN.md` is the user's own list with the same format. Read it but **never edit it**.
+Argument (optional):
 
-Optional argument: a focus area (e.g. a subsystem, `onboarding`, `UI`, one of the idea
-sources). Without one, look at the whole project.
+- nothing: every open idea in `USER_IDEAS.md` that is not tagged **[HOLD]**;
+- ids from `USER_IDEAS.md` (`I3 I5`), or from `CLAUDE_IDEAS.md` (`claude:I2`; naming one
+  counts as approving it);
+- a free-text wish (`a way to undo the last move`);
+- an id from `CLAUDE_PLAN.md` (`F3`) to sharpen that feature.
 
-## 1. Gather context
+With one idea, wish or feature, go **in depth** (up to three question rounds). With several,
+plan them as a **batch** (one round of questions for all, a second only where answers opened
+new ones).
+
+## 1. Context
 
 1. If `USER_WORKFLOW.md` is missing, tell the user to run `/setup-workflow` and stop.
-2. Read `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md`.
-3. Run `workflow-lists stamp`. Every stamp written in this pass uses exactly this value
-   (and the **Passes** line its date, time and commit).
-4. Read `USER_WORKFLOW.md`: the **Design docs** (and whether conflicting ideas are allowed)
-   and the **Idea sources**. Then read **all the design docs** it names. They are the intent,
-   and the yardstick for every idea. Note what they plan that does not exist yet. If the
-   project has no design docs, the intent comes from `CLAUDE.md`, the README and
-   `USER_PLAN.md`; say so in the report.
-5. Read `CLAUDE.md`, the current `CLAUDE_PLAN.md` and `USER_PLAN.md`, so you don't duplicate
-   anything already listed by either side. The **Dropped** section of `CLAUDE_PLAN.md` lists
-   ideas the user turned down: don't suggest them again, not even reworded. Only bring one back
-   if the project changed so much that the user's reason no longer applies, and then say so in
-   the item and in the report.
-6. Look at the project as it is now: its main systems, data and UI. Ideas have to fit the code
-   that exists and say how they would plug into it. If a tool to run and look at the product
-   is available (see `CLAUDE.md` → `### Verification`), using it can help judge the feel; it's
-   optional.
+2. Read `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md`, `CLAUDE.md`,
+   `USER_WORKFLOW.md` (design docs, code standards, **Ask before**, `## Runs` for the default
+   `features` model), `USER_IDEAS.md` and `CLAUDE_PLAN.md` (features the new ones may build on
+   or duplicate). Of `CLAUDE_IDEAS.md`, read the named ideas and the `## Dropped` section.
+3. Run `workflow-lists stamp` for the stamps.
+4. No ideas to plan (none open, or all on hold): say so, suggest writing some into
+   `USER_IDEAS.md` or `/pitch-feature` for one of Claude's, and stop.
 
-## 2. Look for ideas
+## 2. Understand each idea
 
-Sources, in this order:
+For every idea: what does the user want, as the user of the product would see it? Read the
+parts of the design docs and the code it would touch: what exists, where it would plug in,
+what constrains it. Stay read-only. Then work out:
 
-1. **Gaps against the design docs:** things they describe that the project doesn't have yet.
-   Turning these into concrete, buildable features is the most valuable thing this pass does.
-2. **The idea sources in `USER_WORKFLOW.md`**, in their order. If it lists none, use:
-   usability, feedback and clarity of what is going on, quality of life, robustness.
+- **Already there or covered:** the code already does it, or a `CLAUDE_PLAN.md` feature
+  covers it. Say so in step 3; the idea is deleted in step 5 (a partly covered one is
+  narrowed to the rest).
+- **The features it becomes:** one or more `F` entries, each buildable by one agent in one go
+  (S or M; L only if it can't be split). Split bigger ideas into features that build on each
+  other ("needs F7"), each working on its own.
+- **The open questions:** what the user of the product sees and does, scope (what is in and
+  out), behaviour in edge cases, what counts as done; plus anything under **Ask before** or
+  that contradicts the design docs. Only what changes the build: decide small details (exact
+  numbers, colours, wording, layout) yourself and list them.
+- **Keep open for:** other open ideas (`USER_IDEAS.md`, `CLAUDE_IDEAS.md`) the implementation
+  should not block.
 
-Each idea must be **aligned with the design docs**: it supports, refines or fills in what they
-describe, and doesn't contradict them.
+**Many ideas:** with more than four, keep this context small: spawn one read-only `Plan`
+subagent per idea (in parallel; model `triage` from `## Runs`, omitted for `inherit`), each
+told to read `list-format.md`, `CLAUDE.md`, `USER_WORKFLOW.md`, its idea and the code it
+touches, and to answer only with the points above: restatement, already-there verdict,
+proposed features (title, What, Done when, How, Size), questions with options and a
+recommendation, Keep open for candidates. Write the entries yourself from their answers.
 
-**Conflicting ideas** are the exception, and only if `USER_WORKFLOW.md` allows them. Only add
-one if you think it is *exceptionally* good, good enough that it would be worth changing the
-plan for. At most one or two per pass, and usually none. It must be marked `[CONFLICT]` and
-say exactly which part of the design docs it conflicts with (file and quote or section) and
-why it is worth adding anyway.
+## 3. Ask the user
 
-Prefer fewer, well-thought-out items over a long list. Check each against the code (is it
-already there, partly there, or impossible with the current architecture?) before recording.
+Lead the conversation; the user should mostly pick options, not write specs.
 
-## 3. Update `CLAUDE_PLAN.md`
+1. Show each idea in two or three plain lines: how you understand it, the features you
+   propose (titles and sizes), and what you found in the code that matters (what already
+   exists, what is hard). For an idea that is already there, say so.
+2. Ask the open questions with `AskUserQuestion`, up to four per call, recommended option
+   first, each with a short description of its consequence. Use previews for UI or
+   data-format alternatives. Add `Not yet` as the last option of each idea's first question
+   (keep the idea, don't plan it now). If an idea contradicts the design docs, say so plainly;
+   the user decides whether to go ahead (then the entry's **Decisions:** says so) or adjust.
+3. Further rounds only if answers opened new questions (in depth: three rounds at most;
+   batch: two). An idea still open after that stays an idea (step 5).
+4. Show the final entries in short form (id, title, the idea it came from, Done when, size,
+   decisions) and ask with `AskUserQuestion`: `Write them` (recommended), `Change something`
+   (adjust and ask again). Anything the user wants dropped or kept as an idea, they say here.
 
-Keep its structure and follow `list-format.md` (entry formats, ids, stamps).
+## 4. Write `CLAUDE_PLAN.md`
 
-- **Existing items:** keep the text and the `_Written:_` stamp. If the code shows an item is
-  done, delete it along with its mentions in other items. If an item needs changing (the code
-  moved on, a better approach, new info), rewrite it and add an `_Updated:_` stamp. An idea
-  that has become concrete moves to `Concrete features` with a new `F` id. Leave items tagged
-  **[HOLD]** as they are, apart from deleting them when they're done.
-- **New items:** `F<n>` in `Concrete features` (you could write the task list now), `I<n>` in
-  `Ideas` (still need design work), ids from each section's `_Next id:_` line, counted up.
-  Concrete features use the full format of `list-format.md`: with **Done when:**, **Size**,
-  **Keep open for:** (ideas in either plan the implementation should not block) and
-  **Model:** when the rubric's pick differs from the default `features` model in
-  `USER_WORKFLOW.md` → `## Runs`. Prefer features of size S or M; split bigger ones.
-- `## Dropped` is only written by `/pitch-feature` and `/explore-feature`.
-- Add a line to the **Passes** list in the header:
-  `- <date time TZ> at <commit>: <scope>, <n> new, <m> updated, <k> removed.`
-- Run `workflow-lists check CLAUDE_PLAN.md` and fix every `error` it reports.
+Entries go into `## Concrete features`, ids from its `_Next id:_` line, counted up, in the
+full format of `list-format.md`: **Idea:** (the idea's id and a few words, or the user's
+wish), **What**, **Why**, **Done when:**, **Design docs**, **How** (with "needs F<n>" where a
+feature builds on another), **Size**, **Decisions:** (the user's answers, in their words where
+they wrote their own, and your listed small details, with the date), **Keep open for:** if
+any, **Model:** if the pick differs from the default `features` model (`list-format.md` →
+"Choosing a model"). Severity from the idea, **[M]** if it has none; `[CONFLICT]` if the user
+decided to go against the design docs. Place new entries by priority; if the new features
+depend on each other or the user gave an order, add or update a `## Suggested order` section.
 
-## 4. Commit
+Sharpening a feature (`F3`): rewrite it in place with an `_Updated:_` stamp.
 
-Commit the updated list:
+Add a line to the **Passes** list in the header:
+`- <date time TZ> at <commit>: <n> ideas planned into <m> features (<ids>), <k> kept as ideas.`
 
-- Stage only `CLAUDE_PLAN.md`, by explicit path. Never stage other changes that are in the
-  tree (if `CLAUDE_PLAN.md` itself already had uncommitted edits before this pass, mention
-  that they are included).
-- Message per `USER_WORKFLOW.md` → `## Commits`: type `chore` (the workflow list files), scope
-  from its scope list or none if none fits (see "Scope reporting" in `list-format.md`), e.g.
-  `chore: record planning pass (<n> new, <m> updated, <k> removed)`. No `Refs:` footer (the
-  pass doesn't implement items). End with the attribution lines from the system reminder.
+## 5. Update the ideas
 
-## 5. Report back
+- **Planned** (fully, or already there): delete the idea from `USER_IDEAS.md` /
+  `CLAUDE_IDEAS.md`. Replace mentions of it in **Keep open for:** lines of `CLAUDE_PLAN.md`
+  with the new feature id.
+- **Partly planned:** narrow the idea to what is left, with an `_Updated:_` line under its
+  heading (stamp line).
+- **Not yet / still open:** leave it, but add the answers so far as `**Decisions:** …
+  (<date>)` at its end, so the next run starts from them.
+- **Dropped:** a user idea only when the user says so (delete it). A Claude idea: delete it
+  and add a line to `## Dropped` in `CLAUDE_IDEAS.md`
+  (`- <id> <name> — <the user's reason> (<date>)`; ask for the reason in one short question
+  if none was given).
+- **Free-text wish kept as an idea:** add it to `USER_IDEAS.md` with a new id, the stamp, the
+  answers so far as **Decisions:** and the open questions.
 
-In a few short paragraphs: how many items are new, updated and removed, the best new ones in
-plain words, any `[CONFLICT]` item and why you added it, the commit (with a scope suggestion
-if no scope fit), and which item you'd pitch first with `/pitch-feature` (or explore with
-`/explore-feature claude:<id>`, for an idea). Do not paste the
-whole file.
+Leave every other idea exactly as the user wrote it.
+
+## 6. Commit
+
+Run `workflow-lists check CLAUDE_PLAN.md USER_IDEAS.md CLAUDE_IDEAS.md` and fix every
+`error` in what you changed. Stage only the list files you edited, by explicit path (if one
+had uncommitted edits before, say they are included). Message per `USER_WORKFLOW.md` →
+`## Commits`, type `chore`, e.g. `chore: plan undo of last move (F7, F8)`; no `Refs:` footer.
+Scope per "Scope reporting" in `list-format.md`. End with the attribution lines from the
+system reminder.
+
+## 7. Report
+
+The features written (ids, titles, sizes), the ideas deleted as already done, the ideas kept
+and what is still open about them, the commit, and the next step:
+`/implement-next-feature <id>` for one, or `/implement-all-features` for the whole plan.

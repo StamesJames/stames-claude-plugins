@@ -12,8 +12,9 @@ All at the repo root.
 |---|---|---|
 | `CLAUDE_ANALYSIS.md` | `/analyse-code` | `/fix-next-finding`, `/fix-all-findings` |
 | `USER_ANALYSIS.md` | the user, by hand | the same (alone with the `user-only` argument) |
-| `CLAUDE_PLAN.md` | `/plan-features` | nothing directly: items are approved into `USER_PLAN.md` (`/pitch-feature`, `/explore-feature`), or `/pitch-feature` builds one right away |
-| `USER_PLAN.md` | the user by hand, and Claude with the user's approval (`/explore-feature`, `/pitch-feature`) | `/implement-next-feature`, `/implement-all-features` |
+| `USER_IDEAS.md` | the user, by hand (and `/pitch-feature` with the user's approval) | `/plan-features`, which turns ideas into concrete features in `CLAUDE_PLAN.md` |
+| `CLAUDE_IDEAS.md` | `/suggest-features` | `/pitch-feature`, which moves an idea the user approves into `USER_IDEAS.md` |
+| `CLAUDE_PLAN.md` | `/plan-features`, from the user's ideas and answers (the user may edit it too) | `/implement-next-feature`, `/implement-all-features` |
 | `USER_WORKFLOW.md` | the user (drafted by `/setup-workflow`) | read by every skill |
 
 `CLAUDE.md` holds the **facts** the skills need (`## Workflow` → `### Code scope`,
@@ -50,7 +51,7 @@ deleted, its mentions not yet), finish the change; otherwise fix what it reports
 
 If the command is missing (`command not found`), do these steps by hand from the rules below.
 
-## Rules for all four lists
+## Rules for all lists
 
 - **Running lists of open items only.** Never start a list from scratch; update it.
 - **Done means deleted.** When an item is fixed or implemented, delete the whole entry, its
@@ -64,11 +65,11 @@ If the command is missing (`command not found`), do these steps by hand from the
   search the git history for ids.
 - A section left without items gets back its `_No open items._` line.
 - **Stamps:** `_Found: YYYY-MM-DD HH:MM TZ (`<short commit>`)_` (analysis) or `_Written: …_`
-  (plans). Take the value from `workflow-lists stamp` (by hand: `date '+%Y-%m-%d %H:%M %Z'`
+  (plan and ideas). Take the value from `workflow-lists stamp` (by hand: `date '+%Y-%m-%d %H:%M %Z'`
   and `git rev-parse --short HEAD`, `no commit` if the repo has none yet); never guess the
   time. Keep the stamps of other entries as they are.
-- **[HOLD]** after the severity: the item is not touched (fixed, implemented, pitched) until
-  the user removes the tag, even when named explicitly. Held items are not "blocked" and don't
+- **[HOLD]** after the severity: the item is not touched (fixed, implemented, planned,
+  pitched) until the user removes the tag, even when named explicitly. Held items are not "blocked" and don't
   count as open for `NOTHING_LEFT`. A pass may still delete a held item that turns out done.
 - **The user's entries** (`USER_*`): **Notes for Claude:** are binding constraints, **Done
   when:** is the acceptance criterion. Entries are often short (a symptom, no paths, no fix):
@@ -81,7 +82,7 @@ If the command is missing (`command not found`), do these steps by hand from the
 These may appear in any entry, right before the closing text or at its end:
 
 - `**Decisions:** <the user's answers> (<date>)`: decisions the user made for this item,
-  recorded by a run's decision step (`loop.md`) or by `/explore-feature`. Binding like
+  recorded by a run's decision step (`loop.md`) or by `/plan-features`. Binding like
   **Notes for Claude:**; an item with decisions covering its open questions no longer needs
   the user.
 - `**Model:** <model>[, reasoning <level>]`: which model (and reasoning effort) a run uses
@@ -99,7 +100,7 @@ When an entry is deleted as done, also delete the `workflow/failed/...` branches
 
 ### Choosing a model
 
-Skills that write entries (`/analyse-code`, `/plan-features`, `/explore-feature`) pick by
+Skills that write work entries (`/analyse-code`, `/plan-features`) pick by
 **difficulty, not severity**, and write `**Model:**` only when the pick differs from the
 default for that kind of work:
 
@@ -119,10 +120,11 @@ In arguments, `skip=` lists, reports, `RESULT:` lines, branch names and commit f
   `workflow/failed/analysis-1.4`.
 - `USER_ANALYSIS.md` items: `U` prefix (`U1.1` = item `1.1` there); in commits
   `user analysis 1.1`; WIP branch `workflow/failed/user-analysis-1.1`.
-- `USER_PLAN.md` items: their heading id (`F2`, `I1`; a heading without one goes by a short
-  slug of its title); in commits `user plan F2`; WIP branch `workflow/failed/user-plan-F2`.
-- `CLAUDE_PLAN.md` items: `claude:F3` / `claude:I2` wherever a `USER_PLAN.md` id could also be
-  meant; in commits `claude plan F3`.
+- `CLAUDE_PLAN.md` items: bare id (`F2`); in commits `plan F2`; WIP branch
+  `workflow/failed/plan-F2`.
+- `USER_IDEAS.md` items: bare id (`I1`; a heading without one goes by a short slug of its
+  title).
+- `CLAUDE_IDEAS.md` items: `claude:I2`.
 
 ## Analysis files (`CLAUDE_ANALYSIS.md`, `USER_ANALYSIS.md`)
 
@@ -147,28 +149,26 @@ What goes wrong and why, with a concrete scenario.
 Section 4 is the main guide for the order of work. It may bundle items
 ("**1.1** together with **3.2**").
 
-## Plan files (`CLAUDE_PLAN.md`, `USER_PLAN.md`)
+## The plan (`CLAUDE_PLAN.md`)
 
-Sections `## Concrete features` (`F<n>`, specific enough to build now) and `## Ideas` (`I<n>`),
-each with its own `_Next id:_`. `USER_PLAN.md` may have a suggested-order section if the user
-writes one.
+The concrete features that get built: one section `## Concrete features` (`F<n>`, with its
+`_Next id:_`), optionally followed by a suggested-order section. Every entry is specific
+enough for one agent to build without asking: behaviour decided, **Done when:** agreed with
+the user, size S or M (L only if it can't be split). Entries come from `/plan-features`,
+which writes them from the user's ideas and answers; writing an entry there is the user's
+approval to build it. The user may edit or add entries by hand: their **Notes for Claude:**
+are binding like in the user's lists, and Claude keeps such edits.
 
-**Ideas are a backlog, never work.** They hold vague ideas so they aren't lost. No run, triage
-or implement skill picks, blocks or asks about them; they only become work through
-`/explore-feature`, which turns one into a concrete feature with a new `F` id (deleting the
-idea, or narrowing it to what is left). Ideas matter to running work only through
-**Keep open for:** (below).
-
-`CLAUDE_PLAN.md` also has a **Passes:** list in its header, and a `## Dropped` section at the
-end: items the user turned down, one line each, `- <id> <name> — <reason> (<date>)`, so later
-passes don't suggest them again (the only non-open items kept anywhere). It is written by
-`/pitch-feature` and `/explore-feature`. Severity there is **[H]** big improvement of the core
-loop/product, **[M]** clear improvement, **[L]** nice to have. **[CONFLICT]** after the
-severity marks the rare item that contradicts the design docs.
+Header: a **Passes:** list, one line per `/plan-features` run. Severity **[H]** most wanted,
+**[M]** wanted, **[L]** nice to have, taken from the idea it came from (default **[M]**).
+**[CONFLICT]** marks an item that contradicts the design docs; the user's decision to build it
+anyway is in its **Decisions:**.
 
 ```markdown
 ### F3 [M] One-line name of the feature
 _Written: 2026-10-24 14:54 CEST (`894a42a`)_
+
+**Idea:** I4 (the idea or wish it came from, in a few words)
 
 **What:** what the user of the product sees and does, in plain words.
 
@@ -179,17 +179,19 @@ _Written: 2026-10-24 14:54 CEST (`894a42a`)_
 **Design docs:** which part of the design docs it builds on (file and section), or "none".
 
 **How:** rough implementation sketch: systems/files involved, new data, persisted-format
-changes.
+changes. "Needs F2" if it builds on another feature.
 
 **Size:** S / M / L, and risks.
+
+**Decisions:** the user's answers and the small details chosen (2026-10-24)
 
 **Keep open for:** I2 (multiplayer), "sorting by date later".
 
 **Model:** sonnet
 ```
 
-Only the heading and the stamp are required in `USER_PLAN.md`; Claude writes the full format.
-Older entries may call **Size** `**Effort:**`; read it the same way.
+Required: **What**, **Why**, **Done when:**, **Design docs**, **How**, **Size**. Older entries
+may call **Size** `**Effort:**`; read it the same way.
 
 **Keep open for:** names ideas (`I2`, `claude:I4`) or free-text future needs the
 implementation must **not block**: avoid choices that would make them expensive later (a
@@ -197,9 +199,31 @@ hard-coded single instance where a list is planned, a format that can't be exten
 **not** mean building for them: no speculative abstractions, hooks, options or config for
 features that don't exist yet.
 
-Ideas use the same stamp and **What/Why/Design docs**, with **Open questions** instead of the
-rest. A `[CONFLICT]` item adds, right after **What**: **Conflicts with:** (file, section and
-quote, and how it contradicts) and **Why anyway:**.
+## Idea files (`USER_IDEAS.md`, `CLAUDE_IDEAS.md`)
+
+One section `## Ideas` (`I<n>`, with its `_Next id:_`). **Ideas are a backlog, never work.**
+No run, triage or implement skill picks, blocks or asks about them. They become work only
+through `/plan-features`, which turns them into concrete features in `CLAUDE_PLAN.md` and
+then deletes the idea (or narrows it to what is left, with `_Updated:_`). Ideas matter to
+running work only through **Keep open for:**.
+
+- **`USER_IDEAS.md`** is the user's. Only the heading is required (`### I3 Undo the last
+  move`, or just a title); id, severity, stamp and text are optional, and an idea may be a
+  single line. Claude adds entries only when the user approves one of its own ideas
+  (`/pitch-feature`), and otherwise edits only the idea being planned.
+- **`CLAUDE_IDEAS.md`** is Claude's own suggestions (`/suggest-features`). Nothing in it is
+  planned before the user approves it into `USER_IDEAS.md` (`/pitch-feature`) or names it
+  explicitly (`/plan-features claude:I2`). Header: a **Passes:** list, one line per
+  `/suggest-features` pass. Severity **[H]** big improvement of the core loop/product,
+  **[M]** clear improvement, **[L]** nice to have. **[CONFLICT]** marks the rare idea that
+  contradicts the design docs. At the end, a `## Dropped` section: ideas the user turned down,
+  one line each, `- <id> <name> — <reason> (<date>)`, so later passes don't suggest them again
+  (the only non-open items kept anywhere). It is written by `/pitch-feature` and
+  `/plan-features`.
+
+Claude's ideas use the stamp and **What**, **Why**, **Design docs**, **Open questions**
+(required), optionally a rough **How:**. A `[CONFLICT]` idea adds, right after **What**:
+**Conflicts with:** (file, section and quote, and how it contradicts) and **Why anyway:**.
 
 ## Commit footer
 
@@ -209,7 +233,7 @@ attribution lines, with one `Refs:` line per item, carrying the item's title so
 
 ```
 Refs: analysis 1.4 (money label not updated on load)
-Refs: user plan F2 (pause menu sound)
+Refs: plan F2 (pause menu sound)
 ```
 
 Add `, partial` inside the parentheses for a partial fix and `, review` for a follow-up

@@ -1,7 +1,6 @@
 # Working off one item: shared steps
 
-Read by the single-item skills (`fix-next-finding`, `implement-next-feature`, and
-`pitch-feature` after approval). They decide *which* item and add their specifics (the list
+Read by the single-item skills (`fix-next-finding`, `implement-next-feature`). They decide *which* item and add their specifics (the list
 file, the commit type, the result word); the steps below are the same for all of them.
 Section letters are referenced from those skills; keep them stable.
 
@@ -20,7 +19,7 @@ Section letters are referenced from those skills; keep them stable.
 Read only what the item needs: its own entry, the files it names, the code around them, and
 of the design docs only the sections the entry's **Design docs:** line names (if it names
 none and the item touches design intent, open the docs `USER_WORKFLOW.md` lists and read only
-the relevant sections). Read `**Keep open for:**` ideas by id, not the whole Ideas section.
+the relevant sections). Read `**Keep open for:**` ideas by id, not the whole idea files.
 
 Run `git status --short` first. If the working tree has unrelated changes, mention them and
 keep your edits clearly separate; don't touch or revert them. Note `git rev-parse --short

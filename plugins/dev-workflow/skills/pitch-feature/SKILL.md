@@ -1,94 +1,87 @@
 ---
 name: pitch-feature
-description: Pick the single concrete feature from CLAUDE_PLAN.md that would be best right now, explain what it is and how it benefits the project, and on the user's answer build it now, approve it into USER_PLAN.md for the next run, or drop it. Never builds more than that one item. Use when the user asks what Claude would build next, for a feature pitch or recommendation from Claude's plan. Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
+description: Pick the single idea from CLAUDE_IDEAS.md (Claude's own suggestions) that would be best right now, explain what it is and how it benefits the project, and on the user's answer add it to USER_IDEAS.md, plan it right away with /plan-features, or drop it. Never changes project code. Use when the user asks what Claude would build next, or for a feature pitch or recommendation from Claude's ideas. Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
 ---
 
-# Pitch one feature from Claude's plan
+# Pitch one of Claude's ideas
 
-`CLAUDE_PLAN.md` (repo root) holds Claude's own suggestions, written by `/plan-features`.
-Nothing in it is built without the user's approval. This skill pitches **one** concrete
-feature; the user then has it built right away, approves it into `USER_PLAN.md` (so the next
-`/implement-all-features` run builds it), or drops it. Never loop, never chain a second build
-in the same run, and never run this skill unattended or in a subagent.
+`CLAUDE_IDEAS.md` (repo root) holds Claude's own suggestions, written by `/suggest-features`.
+Nothing in it is planned or built without the user's approval. This skill pitches **one**
+idea; the user then adds it to their ideas in `USER_IDEAS.md` (so `/plan-features` plans it),
+has it planned right away, or drops it. Never loop, never run this skill unattended or in a
+subagent, and never change project code.
 
-Optional argument: an item id (`F3`) to pitch that one, or a focus (`quick`, `onboarding`) to
-pick within it. Ideas (`I` items) are not pitched: for one, suggest
-`/explore-feature claude:<id>`.
+Optional argument: an idea id (`I3` or `claude:I3`) to pitch that one, or a focus (`quick`,
+`onboarding`) to pick within it.
 
-## 1. Check for open points
+## 1. Check for open ideas
 
 1. If `USER_WORKFLOW.md` is missing, tell the user to run `/setup-workflow` and stop.
 2. Read `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md`, `CLAUDE.md`,
-   `USER_WORKFLOW.md` and `CLAUDE_PLAN.md`. If it holds no concrete features, say so, suggest
-   `/plan-features` (or `/explore-feature` for its ideas), and stop.
-3. Read the design-doc sections the candidates name, `USER_PLAN.md` and
+   `USER_WORKFLOW.md` and `CLAUDE_IDEAS.md`. If it holds no open ideas, say so, suggest
+   `/suggest-features`, and stop.
+3. Read the design-doc sections the candidates name, `USER_IDEAS.md`, `CLAUDE_PLAN.md` and
    `git log --oneline -15`, so you know the intent and what the user is working on right now.
 
-## 2. Pick the best item for *now*
+## 2. Pick the best idea for *now*
 
 Not simply the highest severity. Weigh:
 
 - Value for the project at its current stage: what its users miss most right now.
-- Fit with recent work and with `USER_PLAN.md` (builds on what was just made, unblocks or
-  complements the user's own items; doesn't collide with something the user is doing).
-- Effort and risk: a smaller item with nearly the same value wins.
-- `[CONFLICT]` items only if they are clearly the best; the pitch must then say so up front.
-- Never items tagged **[HOLD]**, not even when named, unless the user lifts the hold.
+- Fit with recent work, `CLAUDE_PLAN.md` and `USER_IDEAS.md` (builds on what was just made,
+  unblocks or complements the user's own plans; doesn't duplicate or collide with them).
+- Effort and risk: a smaller idea with nearly the same value wins.
+- `[CONFLICT]` ideas only if they are clearly the best; the pitch must then say so up front.
+- Never ideas tagged **[HOLD]**, not even when named, unless the user lifts the hold.
 
-**Check the item against the current code** before pitching: if it is already done, delete
-the entry, say so and pick another one. If the code moved on, adjust the plan for the pitch.
+**Check the idea against the current code and the plan** before pitching: if it is already
+done or planned, delete the entry, say so and pick another one. If the code moved on, adjust
+the idea for the pitch.
 
 ## 3. Pitch it
 
 Tell the user, short and in plain words:
 
 - **What** it is, as the user of the product experiences it.
-- **Why now**: how it benefits the project and why this one beats the other open items.
-- **How**: the approach, the files/systems touched, the size, and the risks (persisted
-  formats, behaviour changes, load-bearing names, anything under **Ask before**).
-- **Conflict**: for a `[CONFLICT]` item, what in the design docs it contradicts and why it's
+- **Why now**: how it benefits the project and why this one beats the other open ideas.
+- **How**: the rough approach, the size, and the risks (persisted formats, behaviour changes,
+  anything under **Ask before**).
+- **Conflict**: for a `[CONFLICT]` idea, what in the design docs it contradicts and why it's
   worth it anyway.
-- **Decisions** the user has to make, if any, with your recommendation.
 
-Then ask with `AskUserQuestion` (put the decisions in the same call if there are any):
+Then ask with `AskUserQuestion`:
 
-- `Implement it now` (recommended for a small item) — build it as pitched, in this session.
-- `Approve for later` (recommended for a larger one) — move it to `USER_PLAN.md` (step 5).
-- `Pitch another` — pitch the next best item instead (once; if that is turned down too, stop).
+- `Plan it now` (recommended for a small, clear idea) — move it to `USER_IDEAS.md` (step 4),
+  then plan it (step 5).
+- `Add to my ideas` (recommended otherwise) — move it to `USER_IDEAS.md` (step 4); the next
+  `/plan-features` picks it up.
+- `Pitch another` — pitch the next best idea instead (once; if that is turned down too, stop).
 - `Drop it` — remove the entry and add one line to `## Dropped` at the end of
-  `CLAUDE_PLAN.md`: `- <id> <name> — <the user's reason> (<date>)`. If the user gave no
-  reason, ask for one in a single short question (they may answer "none"). Then stop.
+  `CLAUDE_IDEAS.md`: `- <id> <name> — <the user's reason> (<date>)`. If the user gave no
+  reason, ask for one in a single short question (they may answer "none"). Commit
+  `CLAUDE_IDEAS.md` (type `chore`, e.g. `chore: drop idea <name>`), then stop.
 
-"Not now" or any other answer (the user's own text) keeps the item and stops, or, if it
-changes the plan, adapt the pitch and ask again. No project code is edited before an explicit
-`Implement it now`.
+"Not now" or any other answer (the user's own text) keeps the idea and stops, or, if it
+changes the idea, adapt the pitch and ask again.
 
-## 4. Implement it now (only after approval)
+## 4. Move it to `USER_IDEAS.md`
 
-Follow **sections C to G of `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/work-item.md`**
-(build, self-review, verify, update the list, commit), attended, with these specifics:
+Add the idea to `USER_IDEAS.md` → `## Ideas` with a new id from its `_Next id:_` line and a
+fresh `_Written:_` stamp (`workflow-lists stamp`). Keep its text, and add the user's remarks
+from the pitch as **Notes for Claude:**. Delete it from `CLAUDE_IDEAS.md` and replace
+references to the old id (`claude:I3`) in `CLAUDE_PLAN.md` **Keep open for:** lines with the
+new one. Run `workflow-lists check USER_IDEAS.md CLAUDE_IDEAS.md CLAUDE_PLAN.md` and fix every
+`error` it reports. Commit the files you edited (type `chore`, e.g.
+`chore: add idea pause menu sound (I9)`, no `Refs:` footer).
 
-- The item comes from `CLAUDE_PLAN.md`; that is the file whose entry is deleted (or rewritten
-  with an `_Updated:_` stamp if only partly done), along with its mentions in other items.
-- Follow the approach and decisions the user approved. If you hit something that changes
-  them, stop and ask again instead of deviating silently.
-- For a `[CONFLICT]` item, also tell the user which part of the design docs is now out of date
-  (don't edit them unless they ask).
-- Commit type usually `feat`; footer `Refs: claude plan <id> (<title>)`.
+## 5. Plan it now (only after `Plan it now`)
 
-## 5. Approve for later
-
-Move the entry to `USER_PLAN.md` → `## Concrete features` with a new id from its `_Next id:_`
-line and a fresh `_Written:_` stamp (`workflow-lists stamp`). Keep its text, add a **Done when:** if it has none
-(derived from **What**, shown to the user in the report), and add the answers to the pitch's
-decisions as **Decisions:**. Delete it from `CLAUDE_PLAN.md` and update references to the old
-id (**Keep open for:** lines, other items) in both plans. Run
-`workflow-lists check USER_PLAN.md CLAUDE_PLAN.md` and fix every `error` it reports. Commit both plan files (type
-`chore`, e.g. `chore: approve pause menu sound for the plan (F9)`, no `Refs:` footer).
+Invoke the `dev-workflow:plan-features` skill with the new id (if the Skill tool is
+unavailable, read `${CLAUDE_PLUGIN_ROOT}/skills/plan-features/SKILL.md` and follow it). The
+questions it asks build on what the user already said in the pitch.
 
 ## 6. Report back
 
-In a few short sentences: what you built (files, how you verified it, what the user should
-check by hand, the commit with a scope suggestion if no scope fit), or the new `USER_PLAN.md`
-id, and how many items are left in `CLAUDE_PLAN.md`. Don't offer to start the next one right
-away.
+In a few short sentences: the new `USER_IDEAS.md` id (or the features planned from it, with
+the next step `/implement-next-feature <id>`), and how many ideas are left in
+`CLAUDE_IDEAS.md`. Don't offer to pitch the next one right away.

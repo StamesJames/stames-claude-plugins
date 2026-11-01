@@ -1,7 +1,7 @@
 # Workflow
 
-How Claude's workflow skills (`/analyse-code`, `/fix-next-finding`, `/plan-features`,
-`/explore-feature`, `/pitch-feature`, `/implement-next-feature`, `/review-change` and the
+How Claude's workflow skills (`/analyse-code`, `/fix-next-finding`, `/suggest-features`,
+`/pitch-feature`, `/plan-features`, `/implement-next-feature`, `/review-change` and the
 loops `/fix-all-findings`, `/implement-all-features`) should work in this project.
 This file is yours: edit it by hand whenever you change your mind. Claude only edits it when
 you ask. Facts about the code (verification commands, code scope, invariants) live in
@@ -12,8 +12,9 @@ you ask. Facts about the code (verification commands, code scope, invariants) li
 
 ## Design docs
 
-Where the intent of the project is written down. `/plan-features` measures every idea against
-these; the implement skills read them before building.
+Where the intent of the project is written down. `/suggest-features` measures every idea
+against these; `/plan-features` and the implement skills read them before planning and
+building.
 
 <!-- Paths, and one line on what each holds. "None" if there are none. -->
 - `<path>`: <what it holds>
@@ -26,8 +27,8 @@ Conflicting ideas: <allowed rarely, tagged [CONFLICT] | never>.
 
 ## Idea sources
 
-Angles `/plan-features` should look from, in rough order of importance. Gaps against the design
-docs always come first.
+Angles `/suggest-features` should look from for its own ideas, in rough order of importance.
+Gaps against the design docs always come first.
 
 <!-- One line each, project-specific. -->
 - <angle>: <what to look for>

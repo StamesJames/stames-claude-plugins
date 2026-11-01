@@ -61,7 +61,8 @@ Read these when the task matches; they are not loaded automatically.
 read it. Each on-demand file starts with a one-line summary of what it covers.
 
 **This skill only manages files listed in the index.** Other `CLAUDE_*.md` files (for example
-the `dev-workflow` plugin's running lists `CLAUDE_ANALYSIS.md` and `CLAUDE_PLAN.md`) belong to
+the `dev-workflow` plugin's running lists `CLAUDE_ANALYSIS.md`, `CLAUDE_PLAN.md` and
+`CLAUDE_IDEAS.md`) belong to
 something else: never edit, move or list them. The same goes for sections of CLAUDE.md that other
 tooling maintains, such as the `## Workflow` section written by `dev-workflow`'s
 `/setup-workflow`: leave them in place and unchanged. If one looks stale or too long, say so in

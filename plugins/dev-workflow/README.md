@@ -4,10 +4,11 @@ Claude Code plugin for a plan-first workflow built on running list files in your
 Long runs open one fresh agent per item, so the context stays small and each item starts
 clean.
 
-- **Features:** `explore-feature` (work out a feature with Claude, write it to
-  `USER_PLAN.md`), `plan-features` (Claude's own suggestions in `CLAUDE_PLAN.md`),
-  `pitch-feature` (one suggestion: build now, approve for later, or drop),
-  `implement-next-feature`, `implement-all-features`.
+- **Features:** you jot down ideas in `USER_IDEAS.md`; `plan-features` asks you the open
+  questions and turns them into concrete features in `CLAUDE_PLAN.md`;
+  `implement-next-feature` and `implement-all-features` build that plan. Claude's own ideas
+  go to `CLAUDE_IDEAS.md` (`suggest-features`); `pitch-feature` pitches one, which you add to
+  your ideas, plan right away, or drop.
 - **Code quality:** `analyse-code` (incremental by default, `full` splits across agents),
   `fix-next-finding`, `fix-all-findings` (`user-only` for your own findings),
   `review-change` (fresh-eyes cleanup of a recent change).

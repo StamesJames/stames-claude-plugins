@@ -21,20 +21,25 @@ import sys
 import time
 from pathlib import Path
 
-LISTS = ["CLAUDE_ANALYSIS.md", "USER_ANALYSIS.md", "CLAUDE_PLAN.md", "USER_PLAN.md"]
+LISTS = ["CLAUDE_ANALYSIS.md", "USER_ANALYSIS.md", "CLAUDE_PLAN.md", "USER_IDEAS.md", "CLAUDE_IDEAS.md"]
 KIND = {
     "CLAUDE_ANALYSIS.md": "analysis",
     "USER_ANALYSIS.md": "analysis",
     "CLAUDE_PLAN.md": "plan",
-    "USER_PLAN.md": "plan",
+    "USER_IDEAS.md": "ideas",
+    "CLAUDE_IDEAS.md": "ideas",
 }
-USER_FILES = {"USER_ANALYSIS.md", "USER_PLAN.md"}
+USER_FILES = {"USER_ANALYSIS.md", "USER_IDEAS.md"}
+# The user's ideas need only a heading: no id, severity or stamp required.
+MINIMAL_FILES = {"USER_IDEAS.md"}
+OLD_PLAN = "USER_PLAN.md"  # replaced in plugin version 3 (setup-workflow -> C)
 # How ids are written outside the files (list-format.md -> "Ids outside the files").
 REF_PREFIX = {
     "CLAUDE_ANALYSIS.md": "",
     "USER_ANALYSIS.md": "U",
-    "CLAUDE_PLAN.md": "claude:",
-    "USER_PLAN.md": "",
+    "CLAUDE_PLAN.md": "",
+    "USER_IDEAS.md": "",
+    "CLAUDE_IDEAS.md": "claude:",
 }
 ANALYSIS_SECTIONS = {
     1: "Bugs",
@@ -49,7 +54,8 @@ OLD_PATHS = [".claude/skills/", "~/.claude/skills"]
 REMOVED_SKILLS = {
     "/fix-next-user-finding": "`/fix-next-finding user-only`",
     "/fix-all-user-findings": "`/fix-all-findings user-only`",
-    "/implement-all-claude-features": "approving CLAUDE_PLAN.md items into USER_PLAN.md",
+    "/implement-all-claude-features": "`/implement-all-features`, which works off CLAUDE_PLAN.md",
+    "/explore-feature": "`/plan-features <idea or wish>`",
 }
 TEMPLATES = Path(__file__).resolve().parent.parent / "skills" / "setup-workflow" / "templates"
 
@@ -58,6 +64,7 @@ COMMIT = r"`?(?:[0-9a-f]{4,40}|no commit)`?"
 STAMP_RE = {
     "analysis": re.compile(rf"^_Found: {DATE} \({COMMIT}\)_$"),
     "plan": re.compile(rf"^_Written: {DATE} \({COMMIT}\)_$"),
+    "ideas": re.compile(rf"^_Written: {DATE} \({COMMIT}\)_$"),
 }
 UPDATED_RE = re.compile(rf"^_Updated: {DATE} \({COMMIT}\)_$")
 FAILED_RE = re.compile(
@@ -183,6 +190,7 @@ class ListFile:
         self.name = name
         self.kind = KIND[name]
         self.user = name in USER_FILES
+        self.minimal = name in MINIMAL_FILES
         self.path = root / name
         self.exists = self.path.is_file()
         self.raw = self.path.read_text(encoding="utf-8") if self.exists else ""
@@ -230,11 +238,11 @@ class ListFile:
                     section.role = "order"
         else:
             low = title.lower()
-            if low == "concrete features":
+            if self.kind == "plan" and low == "concrete features":
                 section.role, section.prefix = "items", "F"
-            elif low == "ideas":
+            elif self.kind == "ideas" and low == "ideas":
                 section.role, section.prefix = "items", "I"
-            elif low == "dropped":
+            elif self.kind == "ideas" and low == "dropped":
                 section.role = "dropped"
             elif "order" in low:
                 section.role = "order"
@@ -288,15 +296,21 @@ def check_structure(lf, probs):
         for num, title in ANALYSIS_SECTIONS.items():
             if not lf.section(number=num):
                 probs.add("error", name, None, f"missing section `## {num}. {title}`")
+    elif lf.kind == "plan":
+        if not lf.section(prefix="F"):
+            probs.add("error", name, None, "missing section `## Concrete features`")
     else:
-        for title, prefix in (("Concrete features", "F"), ("Ideas", "I")):
-            if not lf.section(prefix=prefix):
-                probs.add("error", name, None, f"missing section `## {title}`")
+        if not lf.section(prefix="I"):
+            probs.add("error", name, None, "missing section `## Ideas`")
         if not lf.user and not lf.section(role="dropped"):
             probs.add("error", name, None, "missing section `## Dropped`")
     if not lf.user:
         for s in lf.sections:
-            if s.role == "other":
+            if s.role != "other":
+                continue
+            if lf.kind == "plan" and s.title.lower() in ("ideas", "dropped"):
+                probs.add("warn", name, s.line, f"`## {s.title}` is from the old plan layout (Claude's ideas now live in CLAUDE_IDEAS.md); run /setup-workflow check to migrate")
+            else:
                 probs.add("warn", name, s.line, f"unexpected section `## {s.title}`")
 
     seen = {}
@@ -324,7 +338,7 @@ def check_structure(lf, probs):
                 if NEXT_ID_RE.match(text.strip()):
                     probs.add("error", name, line, "`_Next id:_` must come before the first item of its section")
             if it.id is None:
-                if lf.kind == "analysis" or not lf.user:
+                if not lf.minimal:
                     probs.add(entry, name, it.line, f"heading `{it.heading}` has no id")
             else:
                 if not re.fullmatch(re.escape(s.prefix) + r"\d+", it.id):
@@ -353,20 +367,21 @@ def check_structure(lf, probs):
 def check_entry(lf, it, probs):
     name = lf.name
     entry = "warn" if lf.user else "error"
-    if not it.tags or it.severity is None:
+    if it.severity is None and not lf.minimal:  # optional in the user's ideas
         probs.add(entry, name, it.line, f"{it.ref}: severity [H], [M] or [L] should follow the id")
-    for tag in it.tags[1:]:
+    for tag in it.tags:
         if tag not in TAGS:
             probs.add("warn", name, it.line, f"{it.ref}: unknown tag [{tag}]")
-        elif tag in SEVERITIES:
-            probs.add(entry, name, it.line, f"{it.ref}: several severities")
+    if sum(tag in SEVERITIES for tag in it.tags) > 1:
+        probs.add(entry, name, it.line, f"{it.ref}: several severities")
     if "CONFLICT" in it.tags and lf.kind == "analysis":
-        probs.add("warn", name, it.line, f"{it.ref}: [CONFLICT] is only used in plan files")
+        probs.add("warn", name, it.line, f"{it.ref}: [CONFLICT] is only used in plan and idea files")
 
     body = [(n, t.strip()) for n, t in it.body if t.strip()]
     stamp_word = "_Found:" if lf.kind == "analysis" else "_Written:"
     if not body or not body[0][1].startswith(stamp_word):
-        probs.add(entry, name, it.line, f"{it.ref}: first line after the heading should be the `{stamp_word} …_` stamp")
+        if not lf.minimal:  # optional in the user's ideas
+            probs.add(entry, name, it.line, f"{it.ref}: first line after the heading should be the `{stamp_word} …_` stamp")
     elif not STAMP_RE[lf.kind].match(body[0][1]):
         probs.add(entry, name, body[0][0], f"{it.ref}: stamp should read `{stamp_word} YYYY-MM-DD HH:MM TZ (`commit`)_`")
 
@@ -387,7 +402,7 @@ def check_entry(lf, it, probs):
     have = it.fields()
     if lf.kind == "analysis":
         need = ["fix"]
-    elif it.section.prefix == "F":
+    elif lf.kind == "plan":
         need = ["what", "why", "done when", "design docs", "how", "size"]
         if "effort" in have:
             have.add("size")
@@ -422,17 +437,17 @@ def check_header(lf, probs):
                     probs.add("warn", name, n, "pass line should start `- YYYY-MM-DD HH:MM TZ at <commit>: `")
 
 
-def resolve(lists, owner, ref_file, item_id):
-    """Is item_id an open item of ref_file (or, for bare plan ids, of either plan)?"""
-    def ids(name):
-        return {it.id for it in lists[name].items()}
-    if item_id in ids(ref_file):
-        return ref_file
-    if lists[owner].kind == "plan" and ref_file == owner:
-        other = "USER_PLAN.md" if owner == "CLAUDE_PLAN.md" else "CLAUDE_PLAN.md"
-        if item_id in ids(other):
-            return other
-    return None
+def resolve(lists, ref_file, item_id):
+    """Is item_id an open item of ref_file?"""
+    return item_id in {it.id for it in lists[ref_file].items()}
+
+
+def plan_ref_file(m):
+    """The file a PLAN_REF_RE match points to: F -> the plan, I -> the user's ideas,
+    claude:I -> Claude's ideas (claude:F is left over from the old layout and resolves nowhere)."""
+    if m.group("claude"):
+        return "CLAUDE_IDEAS.md"
+    return "CLAUDE_PLAN.md" if m.group("id").startswith("F") else "USER_IDEAS.md"
 
 
 def check_references(lists, probs):
@@ -440,8 +455,8 @@ def check_references(lists, probs):
         if not lf.exists:
             continue
         name = lf.name
-        # Keep open for: lines in plan items.
-        if lf.kind == "plan":
+        # Keep open for: lines in plan and idea items.
+        if lf.kind != "analysis":
             for it in lf.items():
                 lines, grab = [], False
                 for n, t in it.body:
@@ -454,8 +469,8 @@ def check_references(lists, probs):
                 for n, t in lines:
                     t = re.sub(r'"[^"]*"|“[^”]*”', "", t)
                     for m in PLAN_REF_RE.finditer(t):
-                        target = "CLAUDE_PLAN.md" if m.group("claude") else name
-                        if not resolve(lists, name, target, m.group("id")):
+                        target = plan_ref_file(m)
+                        if not resolve(lists, target, m.group("id")):
                             probs.add("error", name, n, f"{it.ref}: **Keep open for:** names {m.group(0)}, which is not an open item", about=target)
         # Suggested-order sections.
         order = lf.section(role="order")
@@ -465,12 +480,12 @@ def check_references(lists, probs):
             if lf.kind == "analysis":
                 for m in ANALYSIS_REF_RE.finditer(t):
                     target = "USER_ANALYSIS.md" if m.group("user") else name
-                    if not resolve(lists, name, target, m.group("id")):
+                    if not resolve(lists, target, m.group("id")):
                         probs.add("error", name, n, f"suggested order names {m.group(0)}, which is not an open item", about=target)
             else:
                 for m in PLAN_REF_RE.finditer(t):
-                    target = "CLAUDE_PLAN.md" if m.group("claude") else name
-                    if not resolve(lists, name, target, m.group("id")):
+                    target = plan_ref_file(m)
+                    if not resolve(lists, target, m.group("id")):
                         probs.add("error", name, n, f"suggested order names {m.group(0)}, which is not an open item", about=target)
         if name == "CLAUDE_ANALYSIS.md":
             open_items = list(lf.items())
@@ -564,9 +579,13 @@ def check_user_workflow(root, probs):
 def run_checks(root, files=None):
     probs = Problems()
     lists = load(root)
+    old_layout = (root / OLD_PLAN).is_file()
+    if old_layout:
+        probs.add("warn", OLD_PLAN, None, "old plan layout: USER_PLAN.md is replaced by USER_IDEAS.md (ideas) and CLAUDE_PLAN.md (concrete features); run /setup-workflow check to migrate", about=None)
     for lf in lists.values():
         if not lf.exists:
-            probs.add("error", lf.name, None, "missing; create it from the template")
+            fix = "migrate the old plan layout with /setup-workflow check" if old_layout else "create it from the template"
+            probs.add("error", lf.name, None, f"missing; {fix}")
             continue
         check_header(lf, probs)
         check_structure(lf, probs)
@@ -666,11 +685,15 @@ def cmd_summary(args):
         total_open += len(work) - len(held)
         total_held += len(held)
         total_ideas += len(idea_items)
-        head = f"{name}: {len(work) - len(held)} open"
-        if held:
-            head += f", {len(held)} on hold"
-        if lf.kind == "plan":
-            head += f", {plural(len(idea_items), 'idea')} (backlog)"
+        if lf.kind == "ideas":
+            held_ideas = sum("HOLD" in it.tags for it in idea_items)
+            head = f"{name}: {plural(len(idea_items), 'idea')} (backlog)"
+            if held_ideas:
+                head += f", {held_ideas} on hold"
+        else:
+            head = f"{name}: {len(work) - len(held)} open"
+            if held:
+                head += f", {len(held)} on hold"
         print(head)
         for it in work:
             print(describe(it))

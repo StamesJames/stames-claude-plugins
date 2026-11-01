@@ -1,19 +1,19 @@
 ---
 name: setup-workflow
-description: Set up the analysis/plan workflow (running lists CLAUDE_ANALYSIS.md, USER_ANALYSIS.md, CLAUDE_PLAN.md, USER_PLAN.md, the user's USER_WORKFLOW.md and a Workflow section in CLAUDE.md) in the current project, or, if it is already set up, check that configuration against the project and propose updates. Use when the user asks to set up, initialise, migrate or re-check the workflow, or when another workflow skill reports that USER_WORKFLOW.md is missing.
+description: Set up the analysis/plan workflow (running lists CLAUDE_ANALYSIS.md, USER_ANALYSIS.md, USER_IDEAS.md, CLAUDE_IDEAS.md, CLAUDE_PLAN.md, the user's USER_WORKFLOW.md and a Workflow section in CLAUDE.md) in the current project, or, if it is already set up, check that configuration against the project and propose updates, including migrating an old USER_PLAN.md layout. Use when the user asks to set up, initialise, migrate or re-check the workflow, or when another workflow skill reports that USER_WORKFLOW.md is missing.
 ---
 
 # Set up or check the workflow
 
 The workflow skills (`analyse-code`, `fix-next-finding`, `fix-all-findings`,
-`plan-features`, `explore-feature`, `pitch-feature`, `implement-next-feature`,
+`suggest-features`, `pitch-feature`, `plan-features`, `implement-next-feature`,
 `implement-all-features`, `review-change`) are generic. A project plugs into them with:
 
 - **`USER_WORKFLOW.md`** (repo root): the user's decisions and preferences. The user edits it
   by hand; you draft it here and afterwards change it only when asked.
 - **`## Workflow` in `CLAUDE.md`**: facts, `### Code scope` and `### Verification`. You keep it
   current.
-- **The four list files** at the repo root.
+- **The five list files** at the repo root.
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md` first.
 Templates are in `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/templates/`.
@@ -71,7 +71,7 @@ configs and conventions you found) and say so instead of asking about each.
 
 - `USER_WORKFLOW.md`: the confirmed draft. Remove the template's `<!-- -->` hints that are
   filled in; keep the rest of the explanatory text.
-- The four list files from the templates, `<code root>` replaced. **Never overwrite an
+- The five list files from the templates, `<code root>` replaced. **Never overwrite an
   existing list file**; if one exists, leave it and check it in B.3 instead.
 - `CLAUDE.md`: add the `## Workflow` section (before `## Architecture` or similar if the file
   has one, otherwise at the end). If a section with the same purpose exists, merge into it.
@@ -110,7 +110,8 @@ suggested commit message (`chore(workflow): set up workflow lists` or per the pr
    (subsections, old names) and `USER_WORKFLOW.md` against the current template (missing
    sections and `## Runs` settings). Don't re-check by hand what it covers. Then read
    `USER_WORKFLOW.md` and the `## Workflow` section of `CLAUDE.md` for step 2; read the lists
-   only where the check reports something.
+   only where the check reports something. If the check reports the old plan layout
+   (`USER_PLAN.md` exists), do section C first.
 2. Check the configuration against the project:
    - paths in design docs, hands-off, code scope that no longer exist, and new top-level
      directories that none of them covers;
@@ -126,3 +127,33 @@ suggested commit message (`chore(workflow): set up workflow lists` or per the pr
    (`AskUserQuestion`, multi-select where it fits). Run `workflow-lists check` again at the end.
 4. Report what you changed, what you proposed and what was approved, and the remaining
    `warn` lines from the check. Don't commit.
+
+## C. Migrating the old plan layout
+
+Before version 3 of the plugin, `USER_PLAN.md` held the user's concrete features and ideas,
+and `CLAUDE_PLAN.md` held Claude's own suggestions (concrete features and ideas, plus
+`## Dropped`). Now the user's ideas are in `USER_IDEAS.md`, Claude's suggestions in
+`CLAUDE_IDEAS.md`, and `CLAUDE_PLAN.md` holds only the approved concrete features.
+
+Tell the user what will move (counts per kind) and ask once with `AskUserQuestion`
+(`Migrate` recommended, `Not now`). On `Migrate`, keep every entry's text, stamps,
+`**Decisions:**`, `**Model:**` and `_Failed:_` lines, and keep ids wherever possible:
+
+1. Old `CLAUDE_PLAN.md` → `CLAUDE_IDEAS.md` (from the template): its ideas keep their `I` ids;
+   its concrete features (never approved) become ideas with new ids taken from the old Ideas
+   `_Next id:_` onwards, with **Open questions:** "none" added if missing. Its `## Dropped`
+   lines and `Passes:` lines move along as they are. `_Next id:_` continues after the last id
+   used.
+2. `USER_PLAN.md` ideas → `USER_IDEAS.md` (from the template), keeping their ids and
+   `_Next id:_`.
+3. `USER_PLAN.md` concrete features (already approved) → the new `CLAUDE_PLAN.md` (from the
+   template), keeping their `F` ids, `_Next id:_` and suggested-order section.
+4. Fix references: in **Keep open for:** and suggested-order lines, bare `I<n>` now means
+   `USER_IDEAS.md`, `claude:I<n>` `CLAUDE_IDEAS.md`, `F<n>` `CLAUDE_PLAN.md`; old
+   `claude:F<n>` ids become their new `claude:I<n>`. `workflow/failed/user-plan-F<n>`
+   branches stay as they are (the `_Failed:_` lines name them).
+5. `git rm USER_PLAN.md`, update the `## Workflow` section of `CLAUDE.md` and the skill
+   names in `USER_WORKFLOW.md`'s intro to the templates' wording (the user's own text stays),
+   run `workflow-lists check` and fix every `error`.
+
+Report the id changes (old → new). Don't commit.

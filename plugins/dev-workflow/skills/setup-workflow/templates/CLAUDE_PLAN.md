@@ -1,24 +1,20 @@
-# Claude Plan
+# Plan
 
-Running list of ideas and concrete features, written by Claude through `/plan-features`. Items
-are built only with your approval: `/pitch-feature` pitches one and builds it or moves it to
-`USER_PLAN.md`, `/explore-feature claude:<id>` works one out with you and moves it to
-`USER_PLAN.md`. Rules (ids, stamps, deleting done items) are in
-`list-format.md` of the `dev-workflow` plugin's `setup-workflow` skill. All paths are relative to `<code root>`
-unless noted. Items are roughly ordered by priority inside each section.
+The concrete features to build, written by `/plan-features` from your ideas in
+`USER_IDEAS.md` and your answers. An entry here is approved for building:
+`/implement-next-feature` builds one, `/implement-all-features` works off the whole list.
+You may edit entries or add your own; **Notes for Claude:** are binding. Rules (ids, stamps,
+deleting done items) are in `list-format.md` of the `dev-workflow` plugin's `setup-workflow`
+skill. All paths are relative to `<code root>` unless noted. Items are roughly ordered by
+priority.
 
-Every item has to fit the design docs named in `USER_WORKFLOW.md`. **[CONFLICT]** marks the
-rare item that contradicts them; it says what it conflicts with and why it is worth adding
-anyway. **[HOLD]** after the severity means: don't pitch or work on this item until the tag is
-removed.
-
-The one exception to "only open items" is the **Dropped** section at the end: items you
-turned down, one line each with the reason, so later passes don't suggest them again.
+**[HOLD]** after the severity means: don't work on this item until the tag is removed.
+**[CONFLICT]** marks a feature that contradicts the design docs; its **Decisions:** line
+records that you want it anyway.
 
 Passes:
 
-Legend: **[H]** big improvement of the core loop, **[M]** clear improvement, **[L]** nice to
-have.
+Legend: **[H]** most wanted, **[M]** wanted, **[L]** nice to have.
 
 ---
 
@@ -27,17 +23,3 @@ have.
 _Next id: F1_
 
 _No open items._
-
----
-
-## Ideas
-
-_Next id: I1_
-
-_No open items._
-
----
-
-## Dropped
-
-_None yet._
