@@ -46,20 +46,6 @@ _No open items._
 
 _Next id: 3.7_
 
-### 3.1 [L] `SCOPE:` lines of the review and after-run analysis agents are not collected
-_Found: 2026-11-01 08:36 CET (`78d25f9`)_
-
-`plugins/dev-workflow/skills/setup-workflow/loop.md:113-114`, `loop.md:138-140`,
-`loop.md:179-185`, `loop.md:198`
-
-`loop.md` 3.4 collects `SCOPE:` lines only from item agents, but `review-change` and
-`analyse-code` print one too when their commit has no scope. Sections 4 and 7 say nothing
-about them, so the final report's "collected `SCOPE:` lines" misses them.
-
-**Fix:** in sections 4 and 7, collect `SCOPE:` lines like in 3.4.
-
-**Model:** haiku
-
 ### 3.2 [L] Reasoning levels differ between `list-format.md` and the script
 _Found: 2026-11-01 08:36 CET (`78d25f9`)_
 
@@ -141,8 +127,7 @@ README's own numbered steps don't mention it, so following them leaves the plugi
 
 ## 4. Suggested order of work
 
-1. **3.1** together with **3.3**: small wording fixes in `loop.md`,
-   `work-item.md` and the loop skills.
+1. **3.3**: delete the repeated final-report paragraph in `implement-all-features`.
 2. **1.5** together with **3.2**: rules vs. script; both need the smoke test.
 3. **3.4**.
 4. **3.5** together with **3.6**: wrapping and README, docs only.

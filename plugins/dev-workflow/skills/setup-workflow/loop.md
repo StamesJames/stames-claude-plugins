@@ -142,8 +142,8 @@ If it does, spawn a `general-purpose` subagent (model `review`), description `Re
 > follow it exactly), and end with the lines that skill defines.
 
 `RESULT: REVIEWED <commit>` or `RESULT: CLEAN` go into `reviews`; `RESULT: FAILED` is noted
-for the report but doesn't stop the run (the reviewer undid its own edits). The tree must be
-clean afterwards, as in step 3.5.
+for the report but doesn't stop the run (the reviewer undid its own edits). Collect its
+`SCOPE:` line as in step 3.4. The tree must be clean afterwards, as in step 3.5.
 
 ## 5. Failures
 
@@ -190,6 +190,8 @@ If **analyse after run** is `yes` for this kind of run and the run made commits,
 > `dev-workflow:analyse-code` skill with the argument `since=<start> unattended` (if the Skill
 > tool is unavailable, read `${CLAUDE_PLUGIN_ROOT}/skills/analyse-code/SKILL.md` and follow it
 > exactly), and end with the lines that skill defines.
+
+Collect its `SCOPE:` line as in step 3.4.
 
 ## 8. Final report
 
