@@ -14,7 +14,8 @@ Follow `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/loop.md` exactly, with these
 - **Single-item skill:** `fix-next-finding`, description `Fix <id>`.
 - **Triage cases** (needs the user, besides `work-item.md` B): findings marked "verify" or
   "possible", and findings asking about design intent. For a "verify" finding, offer
-  `Investigate and fix if confirmed` (recommended) and `Skip it`.
+  `Investigate and fix if confirmed` (recommended); `Skip this run` (added by `loop.md`)
+  covers skipping.
 - **Order** for the triage: the user's findings first (a `CLAUDE_ANALYSIS.md` item only goes
   before them with a higher severity), each file by its section 4, then severity.
 

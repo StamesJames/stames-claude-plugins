@@ -17,27 +17,6 @@ Legend: **[H]** high — fix before building more on top, **[M]** medium, **[L]*
 
 _Next id: 1.6_
 
-### 1.2 [M] Decision step: duplicate skip options, and `Skip it` has no recording rule
-_Found: 2026-11-01 08:36 CET (`78d25f9`)_
-
-`plugins/dev-workflow/skills/fix-all-findings/SKILL.md:15-17`,
-`plugins/dev-workflow/skills/setup-workflow/loop.md:73-80`, `loop.md:81-89`
-
-For a "verify" finding, `fix-all-findings` tells triage to offer `Investigate and fix if
-confirmed` and `Skip it`; `loop.md` 2.2 then adds `Skip this run` to every item's first
-question, so the user sees two skip options. `loop.md` 2.3 has no rule for `Skip it`, so it
-falls under "Otherwise add **Decisions:**": the entry gets `**Decisions:** Skip it` and the
-item is queued as decided, leaving the item agent to interpret it. Separately, a `_Failed:_`
-item already has four options (the `AskUserQuestion` maximum), so adding `Skip this run`
-drops "the weakest", which is undefined; an unattended orchestrator may drop `Drop it` or
-`Put on hold` arbitrarily.
-
-**Fix:** remove `Skip it` from `fix-all-findings` (`Skip this run` covers it). In `loop.md`
-2.2, name the option that gives way for `_Failed:_` items (e.g. `Drop it`, still reachable
-through "Other"), or fold `Skip this run` into the failed-item option set explicitly.
-
-**Decisions:** For `_Failed:_` items, `Drop it` gives way to `Skip this run` (still reachable through "Other"); remove `Skip it` from `fix-all-findings`. (2026-11-01)
-
 ### 1.3 [M] `loop.md` hands literal `${CLAUDE_PLUGIN_ROOT}` paths to subagents
 _Found: 2026-11-01 08:36 CET (`78d25f9`)_
 
@@ -202,10 +181,9 @@ README's own numbered steps don't mention it, so following them leaves the plugi
 
 ## 4. Suggested order of work
 
-1. **1.2**: in the decision path of `loop.md` and `fix-all-findings`.
-2. **1.3**: one line in `loop.md` plus a path in `plan-features`.
-3. **1.4** together with **3.1** and **3.3**: small wording fixes in `loop.md`,
+1. **1.3**: one line in `loop.md` plus a path in `plan-features`.
+2. **1.4** together with **3.1** and **3.3**: small wording fixes in `loop.md`,
    `work-item.md` and the loop skills.
-4. **1.5** together with **3.2**: rules vs. script; both need the smoke test.
-5. **3.4**.
-6. **3.5** together with **3.6**: wrapping and README, docs only.
+3. **1.5** together with **3.2**: rules vs. script; both need the smoke test.
+4. **3.4**.
+5. **3.5** together with **3.6**: wrapping and README, docs only.

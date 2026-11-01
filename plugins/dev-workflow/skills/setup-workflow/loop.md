@@ -77,7 +77,8 @@ as `effort`.
 2. **Ask.** If there are DECIDE items, show the user each one in two lines (id, title,
    approach), then ask their questions with `AskUserQuestion`, up to four questions per call,
    recommended option first. Add `Skip this run` as the last option of each item's first
-   question (dropping the weakest option if it already has four). Ask nothing else: no run
+   question; if it already has four options (a `_Failed:_` item), `Drop it` gives way, still
+   reachable through "Other". Ask nothing else: no run
    confirmation, no model choice.
 3. **Record.** For every DECIDE item, edit its entry in the list file:
    - `Skip this run`: no edit; add the id to `skip`.
