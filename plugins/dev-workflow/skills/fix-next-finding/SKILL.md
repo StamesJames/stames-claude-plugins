@@ -34,7 +34,8 @@ Arguments (all optional, see also `work-item.md` A):
 
 Read the list(s) in play (with an id: only that entry). If sections 1–3 hold no findings (or
 the files are missing), say there is nothing open (suggest `/analyse-code`); unattended,
-finish with `RESULT: NOTHING_LEFT`.
+finish with `RESULT: NOTHING_LEFT`. The same result when a given id's entry no longer
+exists (already fixed by another item).
 
 ## 2. Pick the finding
 

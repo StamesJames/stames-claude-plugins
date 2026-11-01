@@ -29,7 +29,8 @@ Arguments (all optional, see also `work-item.md` A): an item id or title (`F2`),
 
 Read `CLAUDE_PLAN.md` (with an id: only that entry). If `## Concrete features` holds no items,
 say there is nothing open (suggest `/plan-features` to turn ideas into features);
-unattended, finish with `RESULT: NOTHING_LEFT`.
+unattended, finish with `RESULT: NOTHING_LEFT`. The same result when a given id's entry no
+longer exists (already built by another item).
 
 ## 2. Pick the item
 

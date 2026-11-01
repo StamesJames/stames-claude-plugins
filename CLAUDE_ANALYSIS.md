@@ -17,24 +17,6 @@ Legend: **[H]** high — fix before building more on top, **[M]** medium, **[L]*
 
 _Next id: 1.6_
 
-### 1.4 [L] No defined result when the given id's entry no longer exists
-_Found: 2026-11-01 08:36 CET (`78d25f9`)_
-
-`plugins/dev-workflow/skills/setup-workflow/work-item.md:138`,
-`plugins/dev-workflow/skills/setup-workflow/loop.md:120`,
-`plugins/dev-workflow/skills/fix-next-finding/SKILL.md:35-37`,
-`plugins/dev-workflow/skills/implement-next-feature/SKILL.md:30-32`
-
-`work-item.md` H allows `RESULT: NOTHING_LEFT` "only when picking yourself", but `loop.md`
-3.4 reads `NOTHING_LEFT` as "the item was gone". Scenario: fixing 1.2 also resolves 3.1 and
-deletes both entries (`fix-next-finding` says to); 3.1 is still queued, and its agent, given
-`3.1`, finds no entry and has no result line that fits.
-
-**Fix:** in `work-item.md` H (and section 1 of both single-item skills), say that a given id
-whose entry no longer exists ends with `RESULT: NOTHING_LEFT`, matching `loop.md`.
-
-**Model:** haiku
-
 ### 1.5 [L] Version numbers in a suggested-order section are flagged as dangling ids
 _Found: 2026-11-01 08:36 CET (`78d25f9`)_
 
@@ -159,7 +141,7 @@ README's own numbered steps don't mention it, so following them leaves the plugi
 
 ## 4. Suggested order of work
 
-1. **1.4** together with **3.1** and **3.3**: small wording fixes in `loop.md`,
+1. **3.1** together with **3.3**: small wording fixes in `loop.md`,
    `work-item.md` and the loop skills.
 2. **1.5** together with **3.2**: rules vs. script; both need the smoke test.
 3. **3.4**.

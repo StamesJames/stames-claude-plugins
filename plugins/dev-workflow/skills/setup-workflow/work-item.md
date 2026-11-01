@@ -135,7 +135,8 @@ issues), then these lines:
 - As the very last line, exactly one of:
   - `RESULT: DONE <id> <short commit>`: entry deleted and committed.
   - `RESULT: PARTIAL <id> <short commit>`: entry rewritten to what is still open, committed.
-  - `RESULT: NOTHING_LEFT`: no open items (only when picking yourself).
+  - `RESULT: NOTHING_LEFT`: no open items when picking yourself, or the given id's entry no
+    longer exists (as `loop.md` reads it).
   - `RESULT: BLOCKED <ids>`: nothing workable unattended; the blocked/skipped ids.
   - `RESULT: FAILED <id> — <one-line reason>`: build or verification failed, nothing
     committed, changes left in the working tree.
