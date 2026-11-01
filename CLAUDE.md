@@ -27,6 +27,58 @@ Run both after any change to manifests or skills. **Bump `version` in the plugin
 Adding a plugin: create `plugins/<name>/` with `.claude-plugin/plugin.json`, add its entry to
 `marketplace.json`, add a row to the table in `README.md`, then validate.
 
+## Workflow
+
+This project uses the `dev-workflow` plugin's skills (`/analyse-code`, `/fix-next-finding`,
+`/fix-all-findings`, `/suggest-features`, `/pitch-feature`, `/plan-features`,
+`/implement-next-feature`, `/implement-all-features`, `/review-change`, `/setup-workflow`).
+The running lists `CLAUDE_ANALYSIS.md`, `USER_ANALYSIS.md`, `USER_IDEAS.md`,
+`CLAUDE_IDEAS.md` and `CLAUDE_PLAN.md` sit at the repo root; their rules are in
+`list-format.md` of the `dev-workflow` plugin's `setup-workflow` skill. The user's
+preferences for them (design docs, idea sources, code standards, hands-off paths, what to ask
+before, run settings, commit rules and scopes) are in `USER_WORKFLOW.md`. This section holds
+the facts; keep it current when the code changes. The lists may be newer than this file: if
+they disagree, check the code. When a finding or plan item is resolved during normal work,
+delete its entry in the same change.
+
+The root list files and `USER_WORKFLOW.md` are this repo's own workflow files. The files
+under `plugins/dev-workflow/skills/setup-workflow/templates/` are plugin code (what
+`/setup-workflow` copies into other projects); don't confuse the two. The skills run from
+the installed copy in the plugin cache, so changes here take effect only after a version
+bump and a marketplace update.
+
+### Code scope
+
+- Project code: `plugins/` (skill prompts, shared rule files, templates, `bin/workflow-lists`,
+  `hooks/hooks.json`, manifests, plugin READMEs), plus `.claude-plugin/marketplace.json`,
+  `README.md` and `CLAUDE.md`.
+- Generated / not project code: none. (Hands-off paths are in `USER_WORKFLOW.md`.)
+- List paths are relative to the repo root.
+
+### Verification
+
+How to check a change; every fix and feature runs these.
+
+1. `claude plugin validate .`, then `claude plugin validate plugins/<name>` for each changed
+   plugin: all print `✔ Validation passed`. Known, accepted warning: the
+   `plugins/dev-workflow/README.md` install-line hint; no new warnings.
+2. A changed plugin has its `version` bumped in `plugin.json` (patch for fixes and wording,
+   minor for features, major for breaking list-format changes).
+3. Cross-references resolve (prints only `done`):
+   ```sh
+   for p in plugins/*/; do grep -rhoE '\$\{CLAUDE_PLUGIN_ROOT\}/[A-Za-z0-9_./-]+' "$p" | sort -u | sed 's/[.]$//' | while read r; do f="$p${r#\$\{CLAUDE_PLUGIN_ROOT\}/}"; [ -e "$f" ] || echo "missing: $f"; done; done; grep -rhoE 'dev-workflow:[a-z-]+' plugins | sort -u | while read s; do [ -d "plugins/dev-workflow/skills/${s#dev-workflow:}" ] || echo "missing skill: $s"; done; echo done
+   ```
+4. If `bin/workflow-lists`, the templates or the list rules changed, the smoke test against
+   fresh templates (prints `OK: no problems …`):
+   ```sh
+   S=/tmp/claude-$(id -u)/wl-smoke; rm -rf $S; mkdir -p $S && cd $S && git init -q && T=<repo>/plugins/dev-workflow/skills/setup-workflow/templates && cp $T/{CLAUDE_ANALYSIS,USER_ANALYSIS,CLAUDE_PLAN,USER_IDEAS,CLAUDE_IDEAS,USER_WORKFLOW}.md . && cp $T/claude-md-section.md CLAUDE.md && python3 -I <repo>/plugins/dev-workflow/bin/workflow-lists check
+   ```
+   Also run `python3 -I plugins/dev-workflow/bin/workflow-lists check` at the repo root
+   (this repo's own lists) and check that changed rules still match what the script checks.
+
+These checks don't run the skills. How a changed prompt behaves only shows once the updated
+plugin is installed and the skill is used in a target project, so the report says this.
+
 ## The `dev-workflow` plugin
 
 Its skills share one workflow built around running list files at the
