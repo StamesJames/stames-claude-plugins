@@ -17,20 +17,7 @@ Legend: **[H]** high — fix before building more on top, **[M]** medium, **[L]*
 
 _Next id: 1.6_
 
-### 1.5 [L] Version numbers in a suggested-order section are flagged as dangling ids
-_Found: 2026-11-01 08:36 CET (`78d25f9`)_
-
-`plugins/dev-workflow/bin/workflow-lists:82`, `bin/workflow-lists:479-484`
-
-`ANALYSIS_REF_RE` matches any `<n>.<n>` in section 4 of the analysis files, which is free
-prose. A line like "after the 3.0 migration, **1.2** first" gives `error … suggested order
-names 3.0, which is not an open item`, and the hook reports it after every edit of the list,
-pushing an agent to reword correct text.
-
-**Fix:** in suggested-order sections only count ids that are bold (`**1.2**`, the format
-`list-format.md` shows) or that are followed by a non-digit separator and match an id pattern
-of an existing section; simplest: require the bold form in section 4 and document that in
-`list-format.md`. Run the smoke test.
+_No open items._
 
 ---
 
@@ -114,6 +101,6 @@ README's own numbered steps don't mention it, so following them leaves the plugi
 
 ## 4. Suggested order of work
 
-1. **1.5** together with **3.2**: rules vs. script; both need the smoke test.
+1. **3.2**: rules vs. script; needs the smoke test.
 2. **3.4**.
 3. **3.5** together with **3.6**: wrapping and README, docs only.

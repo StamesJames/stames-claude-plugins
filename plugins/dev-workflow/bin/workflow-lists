@@ -79,7 +79,7 @@ BRANCH_RE = re.compile(r"workflow/failed/[\w./-]*[\w-]")
 PASS_RE = re.compile(rf"^- {DATE} at {COMMIT}: .+")
 DROPPED_RE = re.compile(r"^- (?P<id>[FI]\d+) .+ — .+ \(\d{4}-\d{2}-\d{2}[^)]*\)\.?$")
 PLAN_REF_RE = re.compile(r"(?<![\w:])(?P<claude>claude:)?(?P<id>[FI]\d+)\b")
-ANALYSIS_REF_RE = re.compile(r"(?<![\w.:/-])(?P<user>U)?(?P<id>\d+\.\d+)(?!\w|\.\d)")
+ANALYSIS_REF_RE = re.compile(r"\*\*(?P<user>U)?(?P<id>\d+\.\d+)\*\*")
 
 
 # --------------------------------------------------------------------------- helpers

@@ -148,7 +148,8 @@ What goes wrong and why, with a concrete scenario.
 ```
 
 Section 4 is the main guide for the order of work. It may bundle items
-("**1.1** together with **3.2**").
+("**1.1** together with **3.2**"). Name items in bold (`**1.1**`, `**U1.1**`); only bold ids
+count as references, so version numbers in the prose are safe.
 
 ## The plan (`CLAUDE_PLAN.md`)
 
