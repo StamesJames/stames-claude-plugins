@@ -49,7 +49,7 @@ ANALYSIS_SECTIONS = {
 }
 SEVERITIES = {"H", "M", "L"}
 TAGS = SEVERITIES | {"HOLD", "CONFLICT"}
-EFFORTS = {"low", "medium", "high", "xhigh", "max"}
+EFFORTS = {"low", "medium", "high", "xhigh"}
 OLD_PATHS = [".claude/skills/", "~/.claude/skills"]
 REMOVED_SKILLS = {
     "/fix-next-user-finding": "`/fix-next-finding user-only`",

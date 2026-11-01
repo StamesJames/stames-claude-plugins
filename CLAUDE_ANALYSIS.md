@@ -33,22 +33,6 @@ _No open items._
 
 _Next id: 3.7_
 
-### 3.2 [L] Reasoning levels differ between `list-format.md` and the script
-_Found: 2026-11-01 08:36 CET (`78d25f9`)_
-
-`plugins/dev-workflow/skills/setup-workflow/list-format.md:88-91`,
-`plugins/dev-workflow/bin/workflow-lists:52`
-
-`list-format.md` lists the levels `low`, `medium`, `high`, `xhigh`; `EFFORTS` in the script
-also accepts `max`. A rule and its check should agree.
-
-**Fix:** pick one: add `max` to `list-format.md` (the Agent tool accepts it) or drop it from
-`EFFORTS`.
-
-**Model:** haiku
-
-**Decisions:** No `max`: remove it from `EFFORTS` in `bin/workflow-lists`. (2026-11-01)
-
 ### 3.4 [L] `analyse-code` is ambiguous about splitting a small `full` scope
 _Found: 2026-11-01 08:36 CET (`78d25f9`)_
 
@@ -101,6 +85,5 @@ README's own numbered steps don't mention it, so following them leaves the plugi
 
 ## 4. Suggested order of work
 
-1. **3.2**: rules vs. script; needs the smoke test.
-2. **3.4**.
-3. **3.5** together with **3.6**: wrapping and README, docs only.
+1. **3.4**.
+2. **3.5** together with **3.6**: wrapping and README, docs only.
