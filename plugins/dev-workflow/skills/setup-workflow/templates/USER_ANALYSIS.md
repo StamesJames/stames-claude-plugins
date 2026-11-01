@@ -1,10 +1,11 @@
 # User Analysis
 
 Running list of cleanup findings, written by hand by you. Claude works them off with
-`/fix-next-finding` and `/fix-all-findings` (add `user-only` for this file alone) and refers
-to them with a `U` prefix (`U1.1` = item `1.1` here). Rules (ids, stamps, deleting fixed items) are in
-`list-format.md` of the `dev-workflow` plugin's `setup-workflow` skill. All paths are relative to `<code root>`
-unless noted. Items are roughly ordered by priority inside each section.
+`/fix-next-finding` and `/fix-all-findings` (add `user-only` for this file alone) and refers to
+them with a `U` prefix (`U1.1` = item `1.1` here). Rules (ids, stamps, deleting fixed items)
+are in `list-format.md` of the `dev-workflow` plugin's `setup-workflow` skill. All paths are
+relative to `<code root>` unless noted. Items are roughly ordered by priority inside each
+section.
 
 **[HOLD]** after the severity means: don't work on this item until the tag is removed.
 

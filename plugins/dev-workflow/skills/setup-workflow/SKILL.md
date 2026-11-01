@@ -54,8 +54,8 @@ Draft `USER_WORKFLOW.md` from the template and the `## Workflow` section from
 `templates/claude-md-section.md`, filled with what you found. Keep the template's `## Commits`
 section as it is (it is the user's default) apart from the scope list. Show the user a short
 summary of the draft: design docs, idea sources, analysis focus, code standards, hands-off
-paths, ask-before rules, run settings (models), scopes, verification commands. Then ask with `AskUserQuestion` only what you could not
-settle yourself, for example:
+paths, ask-before rules, run settings (models), scopes, verification commands. Then ask with
+`AskUserQuestion` only what you could not settle yourself, for example:
 
 - verification commands, if none were found or they don't run;
 - which docs are the design intent, and whether conflicting ideas are allowed;
@@ -98,9 +98,9 @@ point to `.claude/skills/...` or `~/.claude/skills/...` (from before these skill
 ### A.5 Report
 
 What you created or changed, what the user should review first in `USER_WORKFLOW.md` (idea
-sources, analysis focus, code standards, run settings, scopes), the verification commands and whether they ran, and a
-suggested commit message (`chore(workflow): set up workflow lists` or per the project's
-`## Commits`). Remind the user that nothing was committed.
+sources, analysis focus, code standards, run settings, scopes), the verification commands and
+whether they ran, and a suggested commit message (`chore(workflow): set up workflow lists` or
+per the project's `## Commits`). Remind the user that nothing was committed.
 
 ## B. Check
 

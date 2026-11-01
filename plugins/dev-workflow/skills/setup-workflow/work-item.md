@@ -1,8 +1,9 @@
 # Working off one item: shared steps
 
-Read by the single-item skills (`fix-next-finding`, `implement-next-feature`). They decide *which* item and add their specifics (the list
-file, the commit type, the result word); the steps below are the same for all of them.
-Section letters are referenced from those skills; keep them stable.
+Read by the single-item skills (`fix-next-finding`, `implement-next-feature`). They decide
+*which* item and add their specifics (the list file, the commit type, the result word); the
+steps below are the same for all of them. Section letters are referenced from those skills;
+keep them stable.
 
 ## A. Modes and arguments
 

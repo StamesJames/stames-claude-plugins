@@ -68,9 +68,10 @@ If the command is missing (`command not found`), do these steps by hand from the
   (plan and ideas). Take the value from `workflow-lists stamp` (by hand: `date '+%Y-%m-%d %H:%M %Z'`
   and `git rev-parse --short HEAD`, `no commit` if the repo has none yet); never guess the
   time. Keep the stamps of other entries as they are.
-- **[HOLD]** after the severity: the item is not touched (fixed, implemented, planned,
-  pitched) until the user removes the tag, even when named explicitly. Held items are not "blocked" and don't
-  count as open for `NOTHING_LEFT`. A pass may still delete a held item that turns out done.
+- **[HOLD]** after the severity: the item is not touched (fixed, implemented, planned, pitched)
+  until the user removes the tag, even when named explicitly. Held items are not "blocked" and
+  don't count as open for `NOTHING_LEFT`. A pass may still delete a held item that turns out
+  done.
 - **The user's entries** (`USER_*`): **Notes for Claude:** are binding constraints, **Done
   when:** is the acceptance criterion. Entries are often short (a symptom, no paths, no fix):
   that is not a reason to skip them. Edit only the entry being resolved and its mentions;
