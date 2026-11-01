@@ -82,6 +82,6 @@ Cross-skill references use `${CLAUDE_PLUGIN_ROOT}/skills/...` paths and the
 One skill, `tidy-claude-md`, holding the whole convention: CLAUDE.md under 200 lines, path rules
 in `.claude/rules/`, on-demand `CLAUDE_<TOPIC>.md` files referenced (never `@`-imported) from a
 `## Context files` index. It only manages files in that index, so `dev-workflow`'s lists
-(`CLAUDE_ANALYSIS.md`, `CLAUDE_PLAN.md`, `CLAUDE_IDEAS.md`) and its `## Workflow` section stay untouched; keep it
-that way if either plugin changes its file names or sections. Scope is CLAUDE.md and its linked
-files only, not skills or agent definitions.
+(`CLAUDE_ANALYSIS.md`, `CLAUDE_PLAN.md`, `CLAUDE_IDEAS.md`) and its `## Workflow` section stay
+untouched; keep it that way if either plugin changes its file names or sections. Scope is
+CLAUDE.md and its linked files only, not skills or agent definitions.
