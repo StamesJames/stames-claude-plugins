@@ -17,28 +17,6 @@ Legend: **[H]** high — fix before building more on top, **[M]** medium, **[L]*
 
 _Next id: 1.6_
 
-### 1.3 [M] `loop.md` hands literal `${CLAUDE_PLUGIN_ROOT}` paths to subagents
-_Found: 2026-11-01 08:36 CET (`78d25f9`)_
-
-`plugins/dev-workflow/skills/setup-workflow/loop.md:55-56`, `loop.md:107`, `loop.md:135`,
-`loop.md:184`, `plugins/dev-workflow/skills/plan-features/SKILL.md:57-62`
-
-Claude Code substitutes `${CLAUDE_PLUGIN_ROOT}` only in loaded skill content; `loop.md` is
-read with the Read tool, so its prompts contain the literal placeholder, and the variable is
-not set in the Bash tool's environment (`echo $CLAUDE_PLUGIN_ROOT` is empty in a session with
-the plugin enabled). The triage `Plan` subagent must read `list-format.md` and `work-item.md`
-by these paths; it only works if the orchestrator notices and substitutes them, which nothing
-tells it to do (possible: a capable orchestrator often does). The fallback paths in steps 3, 4
-and 7 have the same problem. `plan-features`' per-idea `Plan` subagents are told to read
-`list-format.md` with no path at all.
-
-**Fix:** add one line before the prompts in `loop.md`: replace `${CLAUDE_PLUGIN_ROOT}` with
-the plugin root (two directories above this file) before sending a prompt. In
-`plan-features`, give the subagents the full `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md`
-path (substituted there, since it is a SKILL.md).
-
-**Decisions:** Investigate and fix if confirmed (triage confirmed `$CLAUDE_PLUGIN_ROOT` is empty in Bash). (2026-11-01)
-
 ### 1.4 [L] No defined result when the given id's entry no longer exists
 _Found: 2026-11-01 08:36 CET (`78d25f9`)_
 
@@ -181,9 +159,8 @@ README's own numbered steps don't mention it, so following them leaves the plugi
 
 ## 4. Suggested order of work
 
-1. **1.3**: one line in `loop.md` plus a path in `plan-features`.
-2. **1.4** together with **3.1** and **3.3**: small wording fixes in `loop.md`,
+1. **1.4** together with **3.1** and **3.3**: small wording fixes in `loop.md`,
    `work-item.md` and the loop skills.
-3. **1.5** together with **3.2**: rules vs. script; both need the smoke test.
-4. **3.4**.
-5. **3.5** together with **3.6**: wrapping and README, docs only.
+2. **1.5** together with **3.2**: rules vs. script; both need the smoke test.
+3. **3.4**.
+4. **3.5** together with **3.6**: wrapping and README, docs only.

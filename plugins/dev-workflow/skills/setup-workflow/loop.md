@@ -10,6 +10,10 @@ subagent, so every item starts with an empty context and only short result lines
 here. Subagents can't start further agents, so the loop runs in this session. The only files
 you edit are the list files (decisions and failure stamps).
 
+**Paths in prompts.** This file is read, not loaded as a skill, so `${CLAUDE_PLUGIN_ROOT}` is
+not substituted and is not set in Bash. Before sending a prompt, replace it with the plugin
+root (the directory two levels above this file, which holds `skills/`).
+
 All questions come **before** the long unattended part (step 2). After that the run doesn't
 need the user, apart from the rare item that turns out to need a decision mid-run (step 6).
 All state that matters is written to the list files, so an interrupted run can simply be

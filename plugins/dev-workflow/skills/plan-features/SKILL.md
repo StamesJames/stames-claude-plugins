@@ -56,8 +56,8 @@ what constrains it. Stay read-only. Then work out:
 
 **Many ideas:** with more than four, keep this context small: spawn one read-only `Plan`
 subagent per idea (in parallel; model `triage` from `## Runs`, omitted for `inherit`), each
-told to read `list-format.md`, `CLAUDE.md`, `USER_WORKFLOW.md`, its idea and the code it
-touches, and to answer only with the points above: restatement, already-there verdict,
+told to read `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md`, `CLAUDE.md`,
+`USER_WORKFLOW.md`, its idea and the code it touches, and to answer only with the points above: restatement, already-there verdict,
 proposed features (title, What, Done when, How, Size), questions with options and a
 recommendation, Keep open for candidates. Write the entries yourself from their answers.
 
