@@ -62,19 +62,6 @@ also accepts `max`. A rule and its check should agree.
 
 **Decisions:** No `max`: remove it from `EFFORTS` in `bin/workflow-lists`. (2026-11-01)
 
-### 3.3 [L] `implement-all-features` repeats a final-report rule from `loop.md`
-_Found: 2026-11-01 08:36 CET (`78d25f9`)_
-
-`plugins/dev-workflow/skills/implement-all-features/SKILL.md:26-27`,
-`plugins/dev-workflow/skills/setup-workflow/loop.md:195`
-
-"The final report also lists the `DEFAULTS:` … and what couldn't be verified" is already in
-`loop.md` section 8 for every run; the code standards say a rule lives in one place.
-
-**Fix:** delete the paragraph.
-
-**Model:** haiku
-
 ### 3.4 [L] `analyse-code` is ambiguous about splitting a small `full` scope
 _Found: 2026-11-01 08:36 CET (`78d25f9`)_
 
@@ -127,7 +114,6 @@ README's own numbered steps don't mention it, so following them leaves the plugi
 
 ## 4. Suggested order of work
 
-1. **3.3**: delete the repeated final-report paragraph in `implement-all-features`.
-2. **1.5** together with **3.2**: rules vs. script; both need the smoke test.
-3. **3.4**.
-4. **3.5** together with **3.6**: wrapping and README, docs only.
+1. **1.5** together with **3.2**: rules vs. script; both need the smoke test.
+2. **3.4**.
+3. **3.5** together with **3.6**: wrapping and README, docs only.

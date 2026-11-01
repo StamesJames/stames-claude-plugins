@@ -22,6 +22,3 @@ Arguments (all optional): a maximum number of items (`3`) and `skip=<ids>`.
 
 If `CLAUDE_PLAN.md` holds no open features but `USER_IDEAS.md` has ideas, suggest
 `/plan-features` instead of stopping silently.
-
-The final report also lists the `DEFAULTS:` the agents chose (the user may want to tune them)
-and what couldn't be verified (UI, feel).
