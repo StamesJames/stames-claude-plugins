@@ -17,7 +17,8 @@ Argument (optional):
 - nothing: every open idea in `USER_IDEAS.md` that is not tagged **[HOLD]**;
 - ids from `USER_IDEAS.md` (`I3 I5`), or from `CLAUDE_IDEAS.md` (`claude:I2`; naming one
   counts as approving it);
-- a free-text wish (`a way to undo the last move`);
+- a free-text wish (`a way to undo the last move`); one handed on by `/brainstorm-feature`
+  comes with **Agreed:** points that count as answered (don't ask them again);
 - an id from `CLAUDE_PLAN.md` (`F3`) to sharpen that feature.
 
 With one idea, wish or feature, go **in depth** (up to three question rounds). With several,

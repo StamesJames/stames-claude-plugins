@@ -5,7 +5,8 @@ Long runs open one fresh agent per item, so the context stays small and each ite
 clean.
 
 - **Features:** you jot down ideas in `USER_IDEAS.md`; `plan-features` asks you the open
-  questions and turns them into concrete features in `CLAUDE_PLAN.md`;
+  questions and turns them into concrete features in `CLAUDE_PLAN.md`; `brainstorm-feature`
+  talks a rough idea through with you first, then plans it straight away;
   `implement-next-feature` and `implement-all-features` build that plan. Claude's own ideas
   go to `CLAUDE_IDEAS.md` (`suggest-features`); `pitch-feature` pitches one, which you add to
   your ideas, plan right away, or drop.

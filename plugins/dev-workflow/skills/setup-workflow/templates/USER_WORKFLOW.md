@@ -1,7 +1,7 @@
 # Workflow
 
 How Claude's workflow skills (`/analyse-code`, `/fix-next-finding`, `/suggest-features`,
-`/pitch-feature`, `/plan-features`, `/implement-next-feature`, `/review-change` and the
+`/pitch-feature`, `/brainstorm-feature`, `/plan-features`, `/implement-next-feature`, `/review-change` and the
 loops `/fix-all-findings`, `/implement-all-features`) should work in this project.
 This file is yours: edit it by hand whenever you change your mind. Claude only edits it when
 you ask. Facts about the code (verification commands, code scope, invariants) live in

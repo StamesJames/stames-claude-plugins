@@ -1,6 +1,6 @@
 ---
 name: suggest-features
-description: Brainstorm Claude's own feature ideas that would improve the project, aligned with the design docs named in USER_WORKFLOW.md, and record them in CLAUDE_IDEAS.md, then commit that file. Nothing is planned or built from it without the user's approval (/pitch-feature). Use when the user asks for Claude's feature ideas, a brainstorm or suggestions for what to build next. Not for turning the user's own ideas into a plan (that is /plan-features). Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
+description: Brainstorm Claude's own feature ideas that would improve the project, aligned with the design docs named in USER_WORKFLOW.md, and record them in CLAUDE_IDEAS.md, then commit that file. Nothing is planned or built from it without the user's approval (/pitch-feature). Use when the user asks for Claude's feature ideas, a brainstorm or suggestions for what to build next. Not for the user's own ideas: talking one through is /brainstorm-feature, planning them is /plan-features. Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
 ---
 
 # Feature suggestion pass

@@ -12,7 +12,7 @@ All at the repo root.
 |---|---|---|
 | `CLAUDE_ANALYSIS.md` | `/analyse-code` | `/fix-next-finding`, `/fix-all-findings` |
 | `USER_ANALYSIS.md` | the user, by hand | the same (alone with the `user-only` argument) |
-| `USER_IDEAS.md` | the user, by hand (and `/pitch-feature` with the user's approval) | `/plan-features`, which turns ideas into concrete features in `CLAUDE_PLAN.md` |
+| `USER_IDEAS.md` | the user, by hand (and `/pitch-feature` or `/brainstorm-feature` with the user's approval) | `/plan-features`, which turns ideas into concrete features in `CLAUDE_PLAN.md` |
 | `CLAUDE_IDEAS.md` | `/suggest-features` | `/pitch-feature`, which moves an idea the user approves into `USER_IDEAS.md` |
 | `CLAUDE_PLAN.md` | `/plan-features`, from the user's ideas and answers (the user may edit it too) | `/implement-next-feature`, `/implement-all-features` |
 | `USER_WORKFLOW.md` | the user (drafted by `/setup-workflow`) | read by every skill |
@@ -213,7 +213,8 @@ running work only through **Keep open for:**.
 - **`USER_IDEAS.md`** is the user's. Only the heading is required (`### I3 Undo the last
   move`, or just a title); id, severity, stamp and text are optional, and an idea may be a
   single line. Claude adds entries only when the user approves one of its own ideas
-  (`/pitch-feature`), and otherwise edits only the idea being planned.
+  (`/pitch-feature`) or parks a talked-through idea (`/brainstorm-feature`), and otherwise
+  edits only the idea being planned.
 - **`CLAUDE_IDEAS.md`** is Claude's own suggestions (`/suggest-features`). Nothing in it is
   planned before the user approves it into `USER_IDEAS.md` (`/pitch-feature`) or names it
   explicitly (`/plan-features claude:I2`). Header: a **Passes:** list, one line per

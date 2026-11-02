@@ -30,10 +30,10 @@ Adding a plugin: create `plugins/<name>/` with `.claude-plugin/plugin.json`, add
 ## Workflow
 
 This project uses the `dev-workflow` plugin's skills (`/analyse-code`, `/fix-next-finding`,
-`/fix-all-findings`, `/suggest-features`, `/pitch-feature`, `/plan-features`,
-`/implement-next-feature`, `/implement-all-features`, `/review-change`, `/setup-workflow`).
-The running lists `CLAUDE_ANALYSIS.md`, `USER_ANALYSIS.md`, `USER_IDEAS.md`,
-`CLAUDE_IDEAS.md` and `CLAUDE_PLAN.md` sit at the repo root; their rules are in
+`/fix-all-findings`, `/suggest-features`, `/pitch-feature`, `/brainstorm-feature`,
+`/plan-features`, `/implement-next-feature`, `/implement-all-features`, `/review-change`,
+`/setup-workflow`). The running lists `CLAUDE_ANALYSIS.md`, `USER_ANALYSIS.md`,
+`USER_IDEAS.md`, `CLAUDE_IDEAS.md` and `CLAUDE_PLAN.md` sit at the repo root; their rules are in
 `list-format.md` of the `dev-workflow` plugin's `setup-workflow` skill. The user's
 preferences for them (design docs, idea sources, code standards, hands-off paths, what to ask
 before, run settings, commit rules and scopes) are in `USER_WORKFLOW.md`. This section holds
@@ -113,9 +113,11 @@ How the pieces fit:
 - **Feature flow:** the user writes ideas (as vague as they like) in `USER_IDEAS.md`;
   `plan-features` asks the open questions and writes concrete features into `CLAUDE_PLAN.md`
   (an entry there is approved for building) and deletes the planned ideas; only
-  `CLAUDE_PLAN.md` is implemented. Claude's own ideas go to `CLAUDE_IDEAS.md`
-  (`suggest-features`) and reach the plan only through `pitch-feature` (moves one into
-  `USER_IDEAS.md`) or an explicit `plan-features claude:I<n>`. Ideas are never work.
+  `CLAUDE_PLAN.md` is implemented. `brainstorm-feature` talks a rough idea through first and
+  hands the summary to `plan-features` as a free-text wish, skipping `USER_IDEAS.md`.
+  Claude's own ideas go to `CLAUDE_IDEAS.md` (`suggest-features`) and reach the plan only
+  through `pitch-feature` (moves one into `USER_IDEAS.md`) or an explicit
+  `plan-features claude:I<n>`. Ideas are never work.
 - `setup-workflow` section C migrates the pre-3.0 layout (`USER_PLAN.md`); `workflow-lists`
   flags that layout. Keep both if the list layout changes again.
 - `review-change` and `analyse-code since=<commit>` are also run by the loops, unattended.
