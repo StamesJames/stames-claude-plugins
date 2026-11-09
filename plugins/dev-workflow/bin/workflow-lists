@@ -638,7 +638,12 @@ def cmd_check(args):
         print(format_problem(p))
     errors = sum(p["level"] == "error" for p in found)
     warnings = len(found) - errors
-    open_count = sum(1 for lf in lists.values() for _ in lf.items(ideas=False))
+    open_count = sum(
+        1
+        for name, lf in lists.items()
+        if not files or name in files
+        for _ in lf.items(ideas=False)
+    )
     if not found:
         print(f"OK: no problems ({plural(open_count, 'open item')}, ideas not counted)")
     else:
