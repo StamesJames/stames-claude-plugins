@@ -35,9 +35,7 @@ be large).
    to run `/setup-workflow` and stop.
 2. Read `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md` (the list format and
    rules) and `${CLAUDE_PLUGIN_ROOT}/skills/analyse-code/part.md` (the checks).
-3. Run `workflow-lists stamp`. Every stamp written in this pass uses exactly this value
-   (and the **Passes** line its date, time and commit).
-4. Use `CLAUDE.md` (already in your context; read the file only if it isn't); its `## Workflow`
+3. Use `CLAUDE.md` (already in your context; read the file only if it isn't); its `## Workflow`
    section gives the code scope and verification. Read `USER_WORKFLOW.md` (analysis focus,
    things not to flag, code standards, hands-off paths, `## Runs` for the default `fixes`
    model), the current `CLAUDE_ANALYSIS.md` and the user's `USER_ANALYSIS.md`. Never edit
@@ -90,16 +88,18 @@ as in step 2.
 Keep its structure and follow `list-format.md`.
 
 - **Existing findings** (those in the scope): leave the text and the `_Found:_` stamp as they
-  are. If the code shows one is resolved, delete the whole entry with its mentions. If one is
-  only partly resolved, or changed, rewrite it to what is still open and add an `_Updated:_`
-  line. Update line numbers that moved.
-- **New findings:** append each to its section with the id from that section's `_Next id:_`
-  line, counting it up, in the entry format from `list-format.md`, with a `**Model:**` line
-  when the rubric's pick differs from the default `fixes` model.
-- Add a line to the **Passes** list in the header: `- <date time TZ> at <commit>: <mode and
-  scope>, <n> new, <m> fixed.` (mode: `full`, `since <commit>`, or the focus).
-- Rewrite section 4 (suggested order) so it reflects the open items.
-- Run `workflow-lists check CLAUDE_ANALYSIS.md` and fix every `error` it reports.
+  are. If the code shows one is resolved, `workflow-lists delete <id>`. If one is only partly
+  resolved, or changed, rewrite it to what is still open, then `workflow-lists set <id>
+  updated`. Update line numbers that moved.
+- **New findings:** one `workflow-lists add CLAUDE_ANALYSIS.md --section <1|2|3> --sev <H|M|L>
+  --title "<title>" [--model <spec>]` each, with the body on stdin in the entry format from
+  `list-format.md` (paths, what goes wrong, **Fix:**). `--model` only when the rubric's pick
+  differs from the default `fixes` model.
+- `workflow-lists pass CLAUDE_ANALYSIS.md "<mode and scope>, <n> new, <m> fixed."` (mode:
+  `full`, `since <commit>`, or the focus).
+- Rewrite section 4 (suggested order) so it reflects the open items, one step per group as
+  `list-format.md` describes.
+- Fix every `error` the commands print.
 
 ## 5. Commit
 

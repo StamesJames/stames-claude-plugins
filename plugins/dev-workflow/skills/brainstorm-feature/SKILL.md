@@ -69,11 +69,10 @@ as an idea in `USER_IDEAS.md`.
 
 ## 4. Park it
 
-Add the idea to `USER_IDEAS.md` → `## Ideas` with a new id from its `_Next id:_` line, a
-`_Written:_` stamp (`workflow-lists stamp`), the summary as its text, the **Agreed:** points as
-`**Decisions:** … (<date>)` and the **Open:** points as **Notes for Claude:**, so a later
-`/plan-features` starts from them. Run `workflow-lists check USER_IDEAS.md` and fix every
-`error`. Commit only `USER_IDEAS.md`, by explicit path (type `chore`, e.g.
+`workflow-lists add USER_IDEAS.md --title "<title>"` with the body on stdin: the summary as
+its text, the **Agreed:** points as `**Decisions:** … (<date>)` and the **Open:** points as
+**Notes for Claude:**, so a later `/plan-features` starts from them. Fix every `error` it
+prints. Commit only `USER_IDEAS.md`, by explicit path (type `chore`, e.g.
 `chore: add idea undo last move (I7)`, no `Refs:` footer; message per `USER_WORKFLOW.md` →
 `## Commits`; end with the attribution lines from the system reminder). Report the new id and
 that `/plan-features <id>` plans it later.

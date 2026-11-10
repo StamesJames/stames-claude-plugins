@@ -19,42 +19,59 @@ newer than `CLAUDE.md`; if they disagree, check the code.
 
 ## The `workflow-lists` command
 
-The plugin puts `workflow-lists` on the Bash tool's `PATH`. Run it from the repo root; it
-prints a few lines, so use it instead of reading whole files:
+The plugin puts `workflow-lists` on the Bash tool's `PATH`. Run it from the repo root. It
+reads and edits the lists for you in a few lines of output: use it instead of reading whole
+files, and for every edit it covers instead of Read/Edit. Ids are written as outside the
+files (`1.4`, `U1.1`, `F2`, `I3`, `claude:I2`).
 
-- `workflow-lists check [<list file>...]`: checks the mechanical rules below (sections,
-  `_Next id:_` lines, ids, `_No open items._`, severities, stamps, `**Model:**` lines,
-  required fields of Claude's entries, `**Keep open for:**` and suggested-order references,
-  `workflow/failed/...` branches, outdated headers; with no file also `CLAUDE.md`'s
-  `## Workflow` section and `USER_WORKFLOW.md` against its template). It prints `OK: …`, or
-  one `error` / `warn` line per problem and exits 1 if there are errors. Run it after editing a
-  list and before committing, and fix every `error` in what you changed. `warn` lines in the
-  user's own entries are the user's to fix: mention them, don't edit those entries.
-- `workflow-lists summary [--ideas] [<list file>...]`: one line per open item (id as used
-  outside the files, tags, title, line number, size, model, decisions, failed branch), held
-  items included and tagged, ideas only with `--ideas`, and a `TOTAL:` line.
-- `workflow-lists show <id>...`: prints just those entries (ids as used outside the files,
-  `1.4`, `U1.1`, `F2`, `I3`, `claude:I2`), each under a `==> <file>:<line>` line. Use it
-  instead of reading a whole list for one entry; to edit the entry, read the file from that
-  line (Read with `offset`).
-- `workflow-lists section <file> <heading>...`: prints those `## ` sections of a file
-  (heading prefix, any case), e.g. `workflow-lists section USER_WORKFLOW.md "Code standards"`.
-- `workflow-lists stamp`: the stamp value, `YYYY-MM-DD HH:MM TZ (`commit`)`.
+Reading:
 
-A hook also runs the check after every edit to a list file and reports errors in that file
-(including references into it that the edit left dangling). If you are mid-change (an entry
-deleted, its mentions not yet), finish the change; otherwise fix what it reports.
+- `check [<list file>...]`: checks the mechanical rules below (with no file also `CLAUDE.md`'s
+  `## Workflow` section and `USER_WORKFLOW.md` against its template); prints `OK: …` or one
+  `error` / `warn` line per problem, exit 1 on errors. Fix every `error` in what you changed;
+  `warn` lines in the user's entries are the user's to fix (mention them).
+- `summary [--ideas] [<list file>...]`: one line per open item (id, tags, title, line, size,
+  model, decisions, failed branch) and a `TOTAL:` line; ideas only with `--ideas`.
+- `show <id>...`: just those entries, each under `==> <file>:<line>`.
+- `find [--since <commit>] [--show] [<path>...]`: the analysis entries citing those files
+  (or the files changed since the commit), plus the ids of entries citing none.
+- `section <file> <heading>...`: those `## ` sections of any file (heading prefix, any case).
+- `stamp`: the stamp value, `YYYY-MM-DD HH:MM TZ (`commit`)`.
 
-If the command is missing (`command not found`), do these steps by hand from the rules below
-(read the entry or section directly, e.g. with `grep -n` and `sed -n`).
+Editing (each stamps, counts ids, keeps `_No open items._` lines and runs the check on the
+files it touched):
+
+- `add <file> --title <title> [--section 1|2|3] [--sev H|M|L] [--model <spec>] [--before <id>]`
+  with the body on stdin (a quoted heredoc, `<<'EOF'`; everything after the stamp line): a new
+  entry with the next id and a fresh stamp, at the end of its section or before `<id>`.
+- `delete <id>... [--to <new id>] [--dropped <reason>]`: deletes entries as done (below) with
+  their suggested-order and **Keep open for:** mentions and the failed branches they name, and
+  prints the `Refs:` line for the commit. `--to` points the mentions to a new id instead
+  (an idea planned into a feature); `--dropped` adds the `## Dropped` line of a Claude idea.
+  Mentions it can't edit safely (prose) are printed as `check this mention yourself:
+  <file>:<line>`: fix those by hand.
+- `set <id> decisions <text>` (appends to the `**Decisions:**` line with the date, and turns a
+  `_Failed:_` stamp into part of it), `set <id> model <spec>|none`, `set <id> hold|unhold`,
+  `set <id> failed <branch>|none <model> <reason>`, `set <id> updated` (the `_Updated:_` stamp
+  of a partly done entry whose text you rewrote).
+- `move claude:<id> USER_IDEAS.md [--note <text>]`: moves an idea to the other idea file with a
+  new id and stamp, pointing its mentions to the new id.
+- `pass <file> <text>`: a stamped line in the header's **Passes** list.
+
+Rewriting an entry's text (partly done, sharpened, changed) is still a Read (from the line
+`show` prints, with `offset`) and an Edit. A hook runs the check after every Edit/Write of a
+list file and reports errors in that file; if you are mid-change, finish it, otherwise fix
+what it reports. If the command is missing (`command not found`), do these steps by hand from
+the rules below.
 
 ## Rules for all lists
 
 - **Running lists of open items only.** Never start a list from scratch; update it.
 - **Done means deleted.** When an item is fixed or implemented, delete the whole entry, its
-  mentions in a suggested-order section and its cross-references in other entries (including
-  `**Keep open for:**` lines), in the same change. Don't strike through, don't mark as done.
-  Git is the archive: the commit's `Refs:` footer (below) finds it again.
+  mentions in a suggested-order section, its cross-references in other entries (including
+  `**Keep open for:**` lines) and the `workflow/failed/...` branches it names, in the same
+  change (`workflow-lists delete`). Don't strike through, don't mark as done. Git is the
+  archive: the commit's `Refs:` footer (below) finds it again.
 - **Partly done:** rewrite the entry to what is still open and add
   `_Updated: <date time TZ> (<commit>)_` under its `_Found:_` / `_Written:_` line.
 - **Ids are never reused or renumbered;** gaps are expected. Every section holding items starts
@@ -75,8 +92,10 @@ If the command is missing (`command not found`), do these steps by hand from the
   leave everything else exactly as the user wrote it. The only lines Claude adds to a user
   entry it isn't resolving are the run lines below (`**Decisions:**`, `_Failed:_`).
 - **Suggested order** sections (section 4 of the analysis files, `## Suggested order` in the
-  plan) name items in bold (`**1.1**`, `**U1.1**`, `**F2**`); only bold ids count as
-  references, so version numbers in the prose are safe.
+  plan) have one numbered step per group of items, starting with the bold ids it covers,
+  joined by `+`, then the reason: `1. **1.1** + **3.2**: one change in the save code.` Only
+  bold ids count as references (version numbers in the prose are safe); keep further bold ids
+  out of the reason, so `workflow-lists delete` can edit the step.
 
 ## Optional entry lines (all lists)
 
@@ -86,8 +105,9 @@ These may appear in any entry, right before the closing text or at its end:
   recorded by a run's decision step (`loop.md`) or by `/plan-features`. Binding like
   **Notes for Claude:**; an item with decisions covering its open questions no longer needs
   the user.
-- `**Keep open for:** <ideas or free-text needs>`: ideas (`I2`, `claude:I4`) or future needs
-  the implementation must **not block**: avoid choices that would make them expensive later
+- `**Keep open for:** <ideas or free-text needs>`, comma-separated, each an id with an
+  optional note in parentheses or a quoted need (`I2 (multiplayer), claude:I4, "sorting by
+  date later"`): ideas or future needs the implementation must **not block**: avoid choices that would make them expensive later
   (a hard-coded single instance where a list is planned, a format that can't be extended). It
   does **not** mean building for them: no speculative abstractions, hooks, options or config
   for features that don't exist yet.
@@ -101,9 +121,6 @@ These may appear in any entry, right before the closing text or at its end:
   of the branch. Written only by `loop.md`. Such an item needs the user's decision before the
   next run touches it; the decision step turns the stamp into a `**Decisions:**` line that
   still names the branch (if any).
-
-When an entry is deleted as done, also delete the `workflow/failed/...` branches it names
-(`git branch -D`), in the same run.
 
 ## Ids outside the files
 

@@ -8,9 +8,8 @@ The user asked for this run, so spawning subagents is intended. You are the
 **orchestrator**: you never read or change project code. Each item is built by a fresh
 subagent, so every item starts with an empty context and only short result lines collect
 here. Subagents can't start further agents, so the loop runs in this session. The only files
-you edit are the list files (decisions, done items and failure stamps) and the run log. To
-edit a list entry, `workflow-lists show <ids>` gives its file and line: read the file from
-there (Read with `offset`), not whole.
+you edit are the list files (decisions, done items and failure stamps), always through
+`workflow-lists set` / `delete`, and the run log.
 
 **Paths in prompts.** This file is read, not loaded as a skill, so `${CLAUDE_PLUGIN_ROOT}` is
 not substituted and is not set in Bash. Before sending a prompt, replace it with the plugin
@@ -100,21 +99,18 @@ as `effort`.
    question; if it already has four options (a `_Failed:_` item), `Drop it` gives way, still
    reachable through "Other". Ask nothing else: no run
    confirmation, no model choice.
-3. **Record.** For every DECIDE and GONE item, edit its entry in the list file:
+3. **Record.** For every DECIDE and GONE item:
    - `Skip this run`: no edit; log `skip <id>`.
-   - `Put on hold`: add `[HOLD]` after the severity; log `skip <id>`.
-   - `Drop it`: delete the entry with its mentions (as `list-format.md` describes) and the
-     branches it names.
-   - Every GONE item (no question asked): delete it the same way and log
+   - `Put on hold`: `workflow-lists set <id> hold`; log `skip <id>`.
+   - `Drop it`: `workflow-lists delete <id>`.
+   - Every GONE item (no question asked): `workflow-lists delete <id>` and log
      `gone <id> — <why>`. Triage already checked the code, so no agent is spent on it; the
      final report lists them, so the user can restore one from git if triage was wrong.
-   - Otherwise add `**Decisions:** <the answers, in the user's words where they wrote their
-     own> (<date>)` at the end of the entry. For a `_Failed:_` item, replace the stamp: the
-     decision line names the branch and the earlier failure reason
-     (`Retry from scratch; earlier attempt on `workflow/failed/...` failed: <reason>`).
+   - Otherwise `workflow-lists set <id> decisions "<the answers, in the user's words where
+     they wrote their own>"`. For a `_Failed:_` item it moves the stamp (branch, model,
+     reason) into the decision line.
 
-   Run `workflow-lists check <the lists you edited>` and fix every `error` in your edits.
-   Commit the list files you edited (by explicit path; type `chore`,
+   Fix every `error` the commands print. Commit the list files you edited (by explicit path; type `chore`,
    `chore: record run decisions for <ids>` or `chore: remove done items <ids>`, both parts
    when both apply; no `Refs:` footer, scope per `list-format.md`).
 4. **Queue:** `ORDER` without skipped ids. Tell the user in one line how many items the run
@@ -185,9 +181,8 @@ A failure never stops the run on its own; the attempt is saved and the run moves
    are on branch `<branch>` (`git diff <run branch>...<branch>`); use them if helpful, but
    start from the current code." (If step 1 saved nothing, leave out the branch sentence.)
    If that succeeds, delete the saved branch (`git branch -D`) and continue as for `DONE`. If it fails, save that attempt as well (step 1).
-3. **Record the failure.** Add the `_Failed:_` stamp from `list-format.md` to the entry
-   (naming the last saved branch, or `no changes` if none was saved, the model and the
-   reason; time from `workflow-lists stamp`) and commit the list file
+3. **Record the failure.** `workflow-lists set <id> failed <last saved branch, or none>
+   <model> "<reason>"` and commit the list file
    (`chore: record failed attempt at <id>`, no `Refs:` footer). Log
    `failed <id> <branch> — <reason>`, count up `consecutive_failures`, and stop the run when
    it reaches the limit from `## Runs` (something is probably wrong beyond a single item).

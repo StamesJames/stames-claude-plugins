@@ -35,7 +35,7 @@ Not simply the highest severity. Weigh:
 - Never ideas tagged **[HOLD]**, not even when named, unless the user lifts the hold.
 
 **Check the idea against the current code and the plan** before pitching: if it is already
-done or planned, delete the entry, say so and pick another one. If the code moved on, adjust
+done or planned, `workflow-lists delete claude:<id>`, say so and pick another one. If the code moved on, adjust
 the idea for the pitch.
 
 ## 3. Pitch it
@@ -56,9 +56,9 @@ Then ask with `AskUserQuestion`:
 - `Add to my ideas` (recommended otherwise) — move it to `USER_IDEAS.md` (step 4); the next
   `/plan-features` picks it up.
 - `Pitch another` — pitch the next best idea instead (once; if that is turned down too, stop).
-- `Drop it` — remove the entry and add one line to `## Dropped` at the end of
-  `CLAUDE_IDEAS.md`: `- <id> <name> — <the user's reason> (<date>)`. If the user gave no
-  reason, ask for one in a single short question (they may answer "none"). Commit
+- `Drop it` — `workflow-lists delete claude:<id> --dropped "<the user's reason>"` (it adds the
+  `## Dropped` line). If the user gave no reason, ask for one in a single short question
+  (they may answer "none"). Commit
   `CLAUDE_IDEAS.md` (type `chore`, e.g. `chore: drop idea <name>`), then stop.
 
 "Not now" or any other answer (the user's own text) keeps the idea and stops, or, if it
@@ -66,12 +66,10 @@ changes the idea, adapt the pitch and ask again.
 
 ## 4. Move it to `USER_IDEAS.md`
 
-Add the idea to `USER_IDEAS.md` → `## Ideas` with a new id from its `_Next id:_` line and a
-fresh `_Written:_` stamp (`workflow-lists stamp`). Keep its text, and add the user's remarks
-from the pitch as **Notes for Claude:**. Delete it from `CLAUDE_IDEAS.md` and replace
-references to the old id (`claude:I3`) in `CLAUDE_PLAN.md` **Keep open for:** lines with the
-new one. Run `workflow-lists check USER_IDEAS.md CLAUDE_IDEAS.md CLAUDE_PLAN.md` and fix every
-`error` it reports. Commit the files you edited (type `chore`, e.g.
+`workflow-lists move claude:<id> USER_IDEAS.md --note "<the user's remarks from the pitch>"`
+(leave out `--note` if there were none). It gives the idea a new id and stamp, keeps its text,
+deletes it from `CLAUDE_IDEAS.md` and points `**Keep open for:**` mentions to the new id. Fix
+every `error` it prints. Commit the files you edited (type `chore`, e.g.
 `chore: add idea pause menu sound (I9)`, no `Refs:` footer).
 
 ## 5. Plan it now (only after `Plan it now`)
