@@ -13,10 +13,10 @@ Before anything else:
 
 - If `USER_WORKFLOW.md` is missing, the project isn't set up for this workflow: tell the user
   to run `/setup-workflow` and stop.
-- Read `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md`,
-  `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/work-item.md`, `CLAUDE.md` and
-  `USER_WORKFLOW.md`. Their rules apply throughout; the steps below refer to the sections of
-  `work-item.md` by letter.
+- Read `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/work-item.md`, then the context its
+  section A lists (part 1 of `list-format.md`, `CLAUDE.md`, the named sections of
+  `USER_WORKFLOW.md`, the item's entry), not those files whole. Their rules apply
+  throughout; the steps below refer to the sections of `work-item.md` by letter.
 
 **Only `## Concrete features` in `CLAUDE_PLAN.md`.** Never work on an idea from
 `USER_IDEAS.md` or `CLAUDE_IDEAS.md`, even when named: point the user to
@@ -27,10 +27,12 @@ Arguments (all optional, see also `work-item.md` A): an item id or title (`F2`),
 
 ## 1. Check for open points
 
-Read `CLAUDE_PLAN.md` (with an id: only that entry). If `## Concrete features` holds no items,
-say there is nothing open (suggest `/plan-features` to turn ideas into features);
-unattended, finish with `RESULT: NOTHING_LEFT`. The same result when a given id's entry no
-longer exists (already built by another item).
+With an id, `workflow-lists show <id>` is all you read of `CLAUDE_PLAN.md`. Without one, run
+`workflow-lists summary CLAUDE_PLAN.md` and `workflow-lists section CLAUDE_PLAN.md
+"Suggested order"`, and read only the entries you weigh (`show`). If `## Concrete features`
+holds no items, say there is nothing open (suggest `/plan-features` to turn ideas into
+features); unattended, finish with `RESULT: NOTHING_LEFT`. The same result when a given id's
+entry no longer exists (`show` prints `not found`: already built by another item).
 
 ## 2. Pick the item
 

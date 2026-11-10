@@ -17,10 +17,20 @@ keep them stable.
 - **The user's decision** for the item may be in the entry (`**Decisions:**`) or appended to
   the prompt. Either counts as approval for what it covers.
 
-Read only what the item needs: its own entry, the files it names, the code around them, and
-of the design docs only the sections the entry's **Design docs:** line names (if it names
-none and the item touches design intent, open the docs `USER_WORKFLOW.md` lists and read only
-the relevant sections). Read `**Keep open for:**` ideas by id, not the whole idea files.
+**Context to read** (the single-item skills read this, not whole files; `R` is the directory
+this file is in, written out in commands):
+
+- part 1 of `R/list-format.md`: `sed '/^# Part 2/,$d' R/list-format.md`;
+- `CLAUDE.md`;
+- of `USER_WORKFLOW.md` only `workflow-lists section USER_WORKFLOW.md "Design docs"
+  "Code standards" "Hands-off" "Ask before" "Commits"`;
+- the item's entry: `workflow-lists show <id>` (it prints the file and line, for editing).
+
+Then read only what the item needs: the files it names, the code around them, and of the
+design docs only the sections the entry's **Design docs:** line names (if it names none and
+the item touches design intent, open the docs `USER_WORKFLOW.md` lists and read only the
+relevant sections). Read `**Keep open for:**` ideas by id (`workflow-lists show`), not the
+whole idea files.
 
 Run `git status --short` first. If the working tree has unrelated changes, mention them and
 keep your edits clearly separate; don't touch or revert them. Note `git rev-parse --short
