@@ -1,7 +1,8 @@
 # Analysing code: the checks, and one part of a split pass
 
 Read by `analyse-code` (its checks apply to every pass) and by the read-only part agents of a
-split pass, which `analyse-code` step 2 or `loop.md` step 7 starts. A part agent's prompt
+split pass, which `analyse-code` step 2 or the run driver (`workflow-lists run go`, after a
+large run) starts. A part agent's prompt
 names: the paths of its part, optionally a base commit (`since <commit>`), optionally
 `after-run`, and optionally an output file.
 

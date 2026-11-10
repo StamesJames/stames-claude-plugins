@@ -17,9 +17,11 @@ Arguments (all optional):
 - a focus area (a subsystem, `save system`, `performance`): analyse only that, in full.
 - `after-run` (with `since=`, from the loops): the changes were already reviewed per item;
   weight the checks as `part.md` describes for `after-run`.
-- `parts=<dir>` (from the loops): the scope was already read by part agents, whose findings
-  are the files in `<dir>`; merge those (step 3) instead of reading the scope yourself.
-- `unattended` (run in a subagent by a loop): never ask, end with the lines from step 6.
+- `parts=<dir>` (from the run driver): the scope was already read by part agents, whose
+  findings are the files in `<dir>`; merge those (step 3) instead of reading the scope
+  yourself.
+- `unattended` (run as a headless agent by a run's driver): never ask, end with the lines
+  from step 6.
 
 Without `full`, `since=` or a focus, the pass is **incremental**: what changed since the
 commit of the last pass in the **Passes** list (`grep '^- .* at ' CLAUDE_ANALYSIS.md | tail -1`). If that commit no longer exists
@@ -78,8 +80,8 @@ in parallel, with this prompt:
 > `${CLAUDE_PLUGIN_ROOT}/skills/analyse-code/part.md` and follow it as a part agent for
 > <paths> <`since <base>` for an incremental pass> <`after-run` if given>.
 
-When run unattended inside a subagent (which can't start agents), read the scope yourself;
-the loops split large scopes themselves and pass `parts=`.
+When run unattended by a run's driver (`workflow-lists run go`), read the scope yourself:
+the driver splits large changes across part agents itself and passes `parts=`.
 
 ## 3. Analyse
 

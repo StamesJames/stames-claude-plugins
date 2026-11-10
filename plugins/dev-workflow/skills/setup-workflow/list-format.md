@@ -5,9 +5,10 @@ its root. Two more shared files sit next to this one: `work-item.md` (how one it
 verified and committed) and `loop.md` (how a run works off a whole list).
 
 This file has two parts. **Part 1** (up to `# Part 2`) holds the rules every skill that
-touches a list needs. **Part 2** holds the files and their entry formats, needed only by
-skills that write or reorder entries (analysis, planning, ideas, setup). Skills that work off
-a single item read only part 1: `sed '/^# Part 2/,$d' <this file>`.
+writes or triages list entries needs. **Part 2** holds the files and their entry formats,
+needed only by skills that write or reorder entries (analysis, planning, ideas, setup).
+Skills that work off a single item read neither: `workflow-lists brief <id>` prints
+`item-rules.md` (the digest an item agent needs) with the item and its context.
 
 `CLAUDE.md` holds the **facts** the skills need (`## Workflow` → `### Code scope`,
 `### Verification`, plus the architecture, conventions and invariants it documents anyway);
@@ -36,7 +37,14 @@ Reading:
 - `find [--since <commit>] [--show] [<path>...]`: the analysis entries citing those files
   (or the files changed since the commit), plus the ids of entries citing none.
 - `section <file> <heading>...`: those `## ` sections of any file (heading prefix, any case).
+- `brief <id>` (or `--context` without an item): everything an agent working on one item
+  needs in one output: the entry, the entries its **Keep open for:** names, `item-rules.md`,
+  the applying sections of `USER_WORKFLOW.md`, `CLAUDE.md`'s code scope and verification,
+  `HEAD` and the tree state.
 - `stamp`: the stamp value, `YYYY-MM-DD HH:MM TZ (`commit`)`.
+- `stats [--by plugin,model,kind,size,role] [--items] [--role item|review|analysis|all]`:
+  tables from the stats file the runs write (`USER_WORKFLOW.md` → `## Runs`): agents, done
+  rate, median turns, tokens and cost per group.
 
 Editing (each stamps, counts ids, keeps `_No open items._` lines and runs the check on the
 files it touched):
@@ -118,9 +126,9 @@ These may appear in any entry, right before the closing text or at its end:
 - `_Failed: <date time TZ> (`<wip branch>`, <model>): <one-line reason>_` under the
   `_Found:_` / `_Written:_` line: a run tried the item and failed; the attempt is saved on the
   named branch. If the attempt left no changes to save, write `(no changes, <model>)` instead
-  of the branch. Written only by `loop.md`. Such an item needs the user's decision before the
-  next run touches it; the decision step turns the stamp into a `**Decisions:**` line that
-  still names the branch (if any).
+  of the branch. Written only by `workflow-lists run`. Such an item needs the user's decision
+  before the next run touches it; the decision step turns the stamp into a `**Decisions:**`
+  line that still names the branch (if any).
 
 ## Ids outside the files
 
@@ -147,8 +155,8 @@ Refs: analysis 1.4 (money label not updated on load)
 Refs: plan F2 (pause menu sound)
 ```
 
-Add `, partial` inside the parentheses for a partial fix and `, review` for a follow-up
-cleanup from `/review-change`. Everything else about the commit message (types, scopes,
+Add `, partial` inside the parentheses for a partial fix, `, rework` for a rework commit after
+a review sent the item back, and `, review` for a follow-up cleanup from `/review-change`. Everything else about the commit message (types, scopes,
 wording) comes from `USER_WORKFLOW.md` → `## Commits`.
 
 ## Scope reporting
@@ -240,6 +248,10 @@ _Written: 2026-10-24 14:54 CEST (`894a42a`)_
 
 **Done when:** what counts as finished.
 
+**Verify:** how an agent shows that: a test to add (what it asserts), a command and its
+expected output, or a behaviour and how to trigger it. Run by the implementer and the
+reviewer.
+
 **Design docs:** which part of the design docs it builds on (file and section), or "none".
 
 **How:** rough implementation sketch: systems/files involved, new data, persisted-format
@@ -254,7 +266,8 @@ changes. "Needs F2" if it builds on another feature.
 **Model:** sonnet
 ```
 
-Required: **What**, **Why**, **Done when:**, **Design docs**, **How**, **Size**. Older entries
+Required: **What**, **Why**, **Done when:**, **Design docs**, **How**, **Size**; **Verify:**
+is expected (the check warns without it) and `/plan-features` always writes it. Older entries
 may call **Size** `**Effort:**`; read it the same way.
 
 ## Idea files (`USER_IDEAS.md`, `CLAUDE_IDEAS.md`)

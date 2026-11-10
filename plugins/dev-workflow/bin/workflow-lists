@@ -21,8 +21,12 @@ Run from the target project (any directory inside its git repo):
                                                    analysis entries citing these files
   workflow-lists triage LIST... [--skip IDS] [--only IDS]
                                                    work order and mechanical triage for a run
+  workflow-lists brief ID | --context              everything an item agent needs, in one output
   workflow-lists run start|queue|skip|log|next|result|commit|changes|end KIND ...
                                                    run state and bookkeeping for the loop skills
+  workflow-lists run go KIND [--auto ...]          drive a prepared run: one `claude -p` per item
+  workflow-lists stats [--by plugin,model,...] [--items] [--role item|review|analysis|all]
+                                                   tables from the stats file of past runs
   workflow-lists hook                              PostToolUse hook (reads hook JSON on stdin)
 
 The rules checked here are the mechanical part of
@@ -33,6 +37,7 @@ Standard library only.
 """
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -433,6 +438,8 @@ def check_entry(lf, it, probs):
     if missing:
         fields = ", ".join(f"**{k[0].upper()}{k[1:]}:**" for k in missing)
         probs.add("error", name, it.line, f"{it.ref}: missing {fields}")
+    if lf.kind == "plan" and "verify" not in have:
+        probs.add("warn", name, it.line, f"{it.ref}: no **Verify:** line (how an agent checks Done when)")
 
 
 def check_header(lf, probs):
@@ -1636,15 +1643,22 @@ def cmd_triage(args):
 
 RUN_KINDS = {"fixes": ["CLAUDE_ANALYSIS.md", "USER_ANALYSIS.md"], "features": ["CLAUDE_PLAN.md"]}
 MODEL_KINDS = ("triage", "features", "fixes", "review", "analysis")
+ITEM_SKILL = {"fixes": "fix-next-finding", "features": "implement-next-feature"}
 DEFAULT_RUNS = {
     "models": {k: ["inherit", None] for k in MODEL_KINDS},
     "escalate": None,
-    "review": "features of size M or L, and any item whose diff has more than 150 changed lines",
+    "review": "features always; fixes of size M or L, or more than 150 changed lines",
+    "rework": 1,
     "analyse": {"features": True, "fixes": False},
     "stop_after": 3,
     "run_branch": False,
+    "limits": {"turns": 80, "usd": 5.0},
+    "permissions": "bypassPermissions",
+    "stats": "~/.claude/dev-workflow/stats.jsonl",
 }
 LIST_EXCLUDES = [".", ":!*_PLAN.md", ":!*_IDEAS.md", ":!*_ANALYSIS.md"]
+PLUGIN_ROOT = Path(__file__).resolve().parent.parent
+TEST_PATH_RE = re.compile(r"(^|/)(tests?|spec|__tests__)/|(^|/)test_[^/]+$|_test\.[^/]+$|\.(test|spec)\.[^/]+$")
 
 
 def git_run(root, *args):
@@ -1654,6 +1668,13 @@ def git_run(root, *args):
     except OSError as e:
         return False, str(e)
     return out.returncode == 0, (out.stdout + out.stderr).strip()
+
+
+def plugin_version():
+    try:
+        return json.loads((PLUGIN_ROOT / ".claude-plugin" / "plugin.json").read_text()).get("version", "?")
+    except (OSError, ValueError):
+        return "?"
 
 
 def parse_runs(root):
@@ -1681,6 +1702,9 @@ def parse_runs(root):
     v = setting("Fresh review")
     if v:
         cfg["review"] = v
+    v = setting("Rework rounds")
+    if v and re.match(r"\d+", v):
+        cfg["rework"] = int(re.match(r"\d+", v).group())
     v = setting("Analyse after run")
     if v:
         for kind, yes in re.findall(r"\b(features|fixes)\s+(yes|no)\b", v, re.I):
@@ -1691,20 +1715,52 @@ def parse_runs(root):
     v = setting("Run branch")
     if v:
         cfg["run_branch"] = v.lower().startswith("yes")
+    v = setting("Limits per agent")
+    if v:
+        m = re.search(r"(\d+)\s*turns", v)
+        if m:
+            cfg["limits"]["turns"] = int(m.group(1))
+        m = re.search(r"(\d+(?:\.\d+)?)\s*USD", v, re.I)
+        if m:
+            cfg["limits"]["usd"] = float(m.group(1))
+    v = setting("Headless permissions")
+    if v:
+        m = re.match(r"`?(\w+)", v)
+        if m:
+            cfg["permissions"] = m.group(1)
+    v = setting("Stats file")
+    if v:
+        m = re.match(r"`?([^`\s]+)", v)
+        cfg["stats"] = None if not m or m.group(1).lower() == "none" else m.group(1)
     return cfg, missing
 
 
+REVIEW_TOKEN_RE = re.compile(
+    r"(?P<kind>\bfeatures\b|\bfixes\b|\bany item\b|\bitems\b)|(?P<always>\balways\b)|(?P<never>\bnever\b)"
+    r"|of size (?P<sizes>[sml](?:\s*(?:or|and|,)\s*[sml])*)\b|more than (?P<lines>\d+) changed lines"
+)
+
+
 def review_due(rule, kind, size, lines):
-    r = rule.lower()
-    if r.startswith("always"):
-        return True
-    if r.startswith("never"):
-        return False
-    m = re.search(r"(features|fixes|items)?\s*of size ([sml](?:\s*(?:or|and|,)\s*[sml])*)\b", r)
-    if m and m.group(1) in (None, "items", kind) and size.lower() in re.findall(r"[sml]", m.group(2)):
-        return True
-    m = re.search(r"more than (\d+) changed lines", r)
-    return bool(m and lines > int(m.group(1)))
+    """Does the `Fresh review` rule ask for a review of this item? Clauses may name a kind
+    (`features always; fixes of size M or L, or more than 150 changed lines`); a clause
+    without one applies to every kind."""
+    current, verdict = None, None
+    for m in REVIEW_TOKEN_RE.finditer(rule.lower()):
+        if m.group("kind"):
+            current = m.group("kind") if m.group("kind") in ("features", "fixes") else None
+            continue
+        if current not in (None, kind):
+            continue
+        if m.group("always"):
+            return True
+        if m.group("never"):
+            verdict = False
+        elif m.group("sizes") and size.lower() in re.findall(r"[sml]", m.group("sizes")):
+            return True
+        elif m.group("lines") and lines > int(m.group("lines")):
+            return True
+    return bool(verdict)
 
 
 def changed_lines(root, rev_range):
@@ -1715,6 +1771,11 @@ def changed_lines(root, rev_range):
 def workflow_scope(root):
     lines = (root / "USER_WORKFLOW.md").read_text(encoding="utf-8").split("\n")
     return "workflow" if any(re.match(r"^- `workflow`", l) for l in lines) else None
+
+
+def project_has_tests(root):
+    out = git(root, "ls-files") or ""
+    return any(TEST_PATH_RE.search(p) for p in out.split("\n"))
 
 
 class Run:
@@ -1756,6 +1817,23 @@ class Run:
             return None
         return git(self.root, "rev-parse", "--short", "HEAD")
 
+    def stat(self, record):
+        """Append one JSON line to the stats file (if configured) and count the cost."""
+        st = self.state
+        record = {"ts": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "project": self.root.name,
+                  "plugin": st.get("plugin", plugin_version()), "run": st["start"], "kind": self.kind, **record}
+        st["spent"] = round(st.get("spent", 0.0) + (record.get("cost_usd") or 0.0), 4)
+        path = st["settings"].get("stats")
+        if not path:
+            return
+        try:
+            p = Path(path).expanduser()
+            p.parent.mkdir(parents=True, exist_ok=True)
+            with p.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(record, sort_keys=True) + "\n")
+        except OSError as e:
+            print(f"stats: could not write {path}: {e}")
+
 
 def need_run(kind):
     if kind not in RUN_KINDS:
@@ -1763,6 +1841,14 @@ def need_run(kind):
         sys.exit(2)
     root = setup_root()
     run = Run(root, kind)
+    return root, run
+
+
+def need_state(kind):
+    root, run = need_run(kind)
+    if not run.state:
+        print(f"no {kind} run is in progress (run start first)")
+        sys.exit(2)
     return root, run
 
 
@@ -1792,10 +1878,13 @@ def wip_branch(root, ref):
     return name
 
 
-def save_attempt(run, ref, reason):
-    """Commit a failed attempt's changes to a WIP branch; returns the branch or None."""
+def save_attempt(run, ref, reason, before=None):
+    """Move a failed attempt (uncommitted changes and any commits since `before`) to a WIP
+    branch and put the run branch back to `before`. Returns the branch or None."""
     root = run.root
-    if not dirty(root):
+    head = git(root, "rev-parse", "--short", "HEAD")
+    moved = bool(before) and git(root, "rev-parse", before) != git(root, "rev-parse", "HEAD")
+    if not dirty(root) and not moved:
         return None
     branch = wip_branch(root, ref)
     back = run.state["run_branch"]
@@ -1803,9 +1892,13 @@ def save_attempt(run, ref, reason):
     if not ok:
         print(f"could not create {branch}: {out}")
         return None
-    git_run(root, "add", "-A")
-    run.commit([], f"wip: failed attempt at {ref}", reason, no_verify=True)
+    if dirty(root):
+        git_run(root, "add", "-A")
+        run.commit([], f"wip: failed attempt at {ref}", reason, no_verify=True)
     git_run(root, "switch", "-q", back)
+    if moved:
+        git_run(root, "reset", "-q", "--hard", before)
+        print(f"moved the commits {before}..{head} of {ref} to {branch} and reset {back} to {before}")
     run.state.setdefault("saved", {}).setdefault(ref, []).append(branch)
     print(f"saved the attempt on {branch}")
     return branch
@@ -1839,18 +1932,14 @@ def record_failure(run, ref, model, reason):
 
 def cmd_run(args):
     if not args or args[0] not in RUN_COMMANDS:
-        print("usage: workflow-lists run start|queue|skip|log|next|result|commit|changes|end KIND ...")
+        print("usage: workflow-lists run start|queue|skip|log|next|result|commit|changes|end|go KIND ...")
         return 2
     return RUN_COMMANDS[args[0]](args[1:])
 
 
-def run_start(args):
-    opts, pos = take_opts(args, {"--max", "--skip", "--footer"}, {"--user-only"})
-    if len(pos) != 1:
-        print('usage: workflow-lists run start fixes|features [--user-only] [--max N] [--skip IDS] [--footer "<attribution lines>"]')
-        return 2
-    kind = pos[0]
-    root, run = need_run(kind)
+def start_run(root, run, opts):
+    """Create the run state (or resume an interrupted run). Returns True when resumed."""
+    kind = run.kind
     last = [l for l in run.log_lines() if l.strip()][-1:]
     resumed = bool(run.state) and bool(last) and last[0] != "end"
     if resumed:
@@ -1858,65 +1947,84 @@ def run_start(args):
         print(f"RESUMED the {kind} run from {st['start']} on {st['run_branch']} (interrupted)")
         cur = st.get("current")
         if cur:
-            if dirty(root):
-                print(f"item {cur['id']} was interrupted with changes in the tree: recording it as failed")
-                save_attempt(run, cur["id"], "run interrupted")
+            still_open = cur["id"] in index(load(root))
+            moved = cur.get("before") and git(root, "rev-parse", cur["before"]) != git(root, "rev-parse", "HEAD")
+            if dirty(root) or (moved and still_open):
+                print(f"item {cur['id']} was interrupted mid-way: recording it as failed")
+                save_attempt(run, cur["id"], "run interrupted", cur.get("before"))
                 print(record_failure(run, cur["id"], cur["model"][0], "run interrupted"))
-            elif cur["id"] in index(load(root)):
+            elif still_open:
                 st["queue"].insert(0, cur["id"])
                 print(f"item {cur['id']} was interrupted before it finished: queued again first")
             else:
                 run.log(f"RESULT: DONE {cur['id']} (finished before the interruption)")
             st["current"] = None
             run.save()
-    else:
-        if dirty(root):
-            print("DIRTY: the tree has changes; every item commits, so commit or stash them first:")
-            print(dirty(root))
-            return 1
-        settings, missing = parse_runs(root)
-        branch = git(root, "branch", "--show-current") or "HEAD"
-        start = git(root, "rev-parse", "--short", "HEAD") or "no-commit"
-        default = (git(root, "symbolic-ref", "--short", "refs/remotes/origin/HEAD") or "").split("/")[-1]
-        if settings["run_branch"] and branch in {"main", "master", default} - {""}:
-            base = f"workflow/{time.strftime('%Y-%m-%d')}-{kind}"
-            name, n = base, 1
-            while git(root, "rev-parse", "--verify", "--quiet", f"refs/heads/{name}") is not None:
-                n += 1
-                name = f"{base}-{n}"
-            git_run(root, "switch", "-q", "-c", name)
-            print(f"run branch: created and switched to {name} (the user merges it)")
-            branch = name
-        for f in (run.log_path, run.state_path):
-            if f.exists():
-                f.unlink()
-        import shutil
-        shutil.rmtree(run.dir / "analysis", ignore_errors=True)
-        run.state = {
-            "kind": kind, "start": start, "run_branch": branch,
-            "lists": ["USER_ANALYSIS.md"] if opts.get("--user-only") else RUN_KINDS[kind],
-            "user_only": bool(opts.get("--user-only")), "settings": settings, "missing": missing,
-            "footer": opts.get("--footer"), "scope": workflow_scope(root),
-            "max": int(opts["--max"]) if opts.get("--max") else None,
-            "queue": [], "sizes": {}, "started": [], "partial": {}, "blocked": [], "redecided": [],
-            "current": None, "retry": None, "consecutive": 0, "saved": {},
-        }
-        run.log(f"start {start} {branch}")
-        for ref in re.split(r"[,\s]+", opts.get("--skip", "")):
-            if ref:
-                run.log(f"skip {ref}")
-        run.save()
-        print(f"STARTED a {kind} run from {start} on {branch}")
+        return True
+    if dirty(root):
+        print("DIRTY: the tree has changes; every item commits, so commit or stash them first:")
+        print(dirty(root))
+        sys.exit(1)
+    settings, missing = parse_runs(root)
+    branch = git(root, "branch", "--show-current") or "HEAD"
+    start = git(root, "rev-parse", "--short", "HEAD") or "no-commit"
+    default = (git(root, "symbolic-ref", "--short", "refs/remotes/origin/HEAD") or "").split("/")[-1]
+    if settings["run_branch"] and branch in {"main", "master", default} - {""}:
+        base = f"workflow/{time.strftime('%Y-%m-%d')}-{kind}"
+        name, n = base, 1
+        while git(root, "rev-parse", "--verify", "--quiet", f"refs/heads/{name}") is not None:
+            n += 1
+            name = f"{base}-{n}"
+        git_run(root, "switch", "-q", "-c", name)
+        print(f"run branch: created and switched to {name} (the user merges it)")
+        branch = name
+    for f in (run.log_path, run.state_path):
+        if f.exists():
+            f.unlink()
+    import shutil
+    shutil.rmtree(run.dir / "analysis", ignore_errors=True)
+    run.state = {
+        "kind": kind, "start": start, "run_branch": branch, "plugin": plugin_version(),
+        "lists": ["USER_ANALYSIS.md"] if opts.get("--user-only") else RUN_KINDS[kind],
+        "user_only": bool(opts.get("--user-only")), "settings": settings, "missing": missing,
+        "footer": opts.get("--footer"), "scope": workflow_scope(root),
+        "max": int(opts["--max"]) if opts.get("--max") else None,
+        "queue": [], "sizes": {}, "started": [], "partial": {}, "blocked": [], "redecided": [],
+        "current": None, "retry": None, "rework": None, "reworked": {}, "consecutive": 0, "saved": {},
+        "spent": 0.0, "tests": project_has_tests(root),
+    }
+    run.log(f"start {start} {branch}")
+    for ref in re.split(r"[,\s]+", opts.get("--skip", "")):
+        if ref:
+            run.log(f"skip {ref}")
+    run.save()
+    print(f"STARTED a {kind} run from {start} on {branch} (plugin {run.state['plugin']})")
+    return False
+
+
+def print_settings(run, resumed):
     st = run.state
-    m = st["settings"]["models"]
+    s = st["settings"]
+    m = s["models"]
     print("models: " + ", ".join(f"{k} {v[0]}" + (f" ({v[1]})" if v[1] else "") for k, v in m.items())
-          + f"; escalate to {st['settings']['escalate'] or 'none'}")
-    print(f"fresh review: {st['settings']['review']}; analyse after run: "
-          f"{'yes' if st['settings']['analyse'][kind] else 'no'}; stop after {st['settings']['stop_after']} failures")
+          + f"; escalate to {s['escalate'] or 'none'}")
+    print(f"fresh review: {s['review']}; rework rounds: {s['rework']}; analyse after run: "
+          f"{'yes' if s['analyse'][run.kind] else 'no'}; stop after {s['stop_after']} failures; "
+          f"limits {s['limits']['turns']} turns, {s['limits']['usd']} USD per agent; stats: {s['stats'] or 'off'}")
     if st["missing"]:
         print("missing ## Runs settings (defaults used; suggest /setup-workflow check): " + ", ".join(st["missing"]))
     if resumed:
         print("queue: " + (" ".join(st["queue"]) or "(empty)"))
+
+
+def run_start(args):
+    opts, pos = take_opts(args, {"--max", "--skip", "--footer"}, {"--user-only"})
+    if len(pos) != 1:
+        print('usage: workflow-lists run start fixes|features [--user-only] [--max N] [--skip IDS] [--footer "<attribution lines>"]')
+        return 2
+    root, run = need_run(pos[0])
+    resumed = start_run(root, run, opts)
+    print_settings(run, resumed)
     return 0
 
 
@@ -1925,7 +2033,7 @@ def run_queue(args):
     if not pos:
         print("usage: workflow-lists run queue KIND [--append] ID[:SIZE]...")
         return 2
-    _, run = need_run(pos[0])
+    _, run = need_state(pos[0])
     st = run.state
     ids = []
     for tok in pos[1:]:
@@ -1945,7 +2053,7 @@ def run_skip(args):
     if len(args) < 2:
         print("usage: workflow-lists run skip KIND ID...")
         return 2
-    _, run = need_run(args[0])
+    _, run = need_state(args[0])
     for ref in args[1:]:
         run.log(f"skip {ref}")
         if ref in run.state["queue"]:
@@ -1959,86 +2067,129 @@ def run_log(args):
     if len(args) < 2:
         print("usage: workflow-lists run log KIND LINE")
         return 2
-    _, run = need_run(args[0])
+    _, run = need_state(args[0])
     run.log(" ".join(args[1:]))
     return 0
 
 
-def run_next(args):
-    if len(args) != 1:
-        print("usage: workflow-lists run next KIND")
-        return 2
-    root, run = need_run(args[0])
-    st = run.state
-    note = None
-    if st.get("retry"):
-        r = st["retry"]
+def next_item(run):
+    """Pick the next unit of work. Returns {"status": NEXT|REDECIDE|EMPTY|LIMIT, ...}."""
+    root, st = run.root, run.state
+    note, escalated, rework = None, False, None
+    if st.get("rework"):
+        r = st.pop("rework")
+        ref, model, rework = r["id"], r["model"], r
+    elif st.get("retry"):
+        r = st.pop("retry")
         ref, model, escalated = r["id"], [r["model"], None], True
         note = f"An earlier attempt with {r['from']} failed: {r['reason']}."
         if r.get("branch"):
             note += (f" Its changes are on branch `{r['branch']}` (`git diff {st['run_branch']}...{r['branch']}`); "
                      "use them if helpful, but start from the current code.")
-        st["retry"] = None
     else:
         if st["max"] and len(st["started"]) >= st["max"]:
-            print(f"LIMIT: {st['max']} items done; go to the after-run steps")
-            return 0
+            return {"status": "LIMIT", "line": f"LIMIT: {st['max']} items done; go to the after-run steps"}
         if not st["queue"]:
             again = [b for b in st["blocked"] if b not in st["redecided"]]
             if again:
                 st["redecided"] += again
                 run.save()
-                print("REDECIDE: " + " ".join(again) + " (blocked during the run: triage and ask again with --only, then queue --append)")
-            else:
-                print("EMPTY: the queue is done; go to the after-run steps")
-            return 0
-        ref, escalated = st["queue"].pop(0), False
+                return {"status": "REDECIDE", "ids": again, "line": "REDECIDE: " + " ".join(again)
+                        + " (blocked during the run: triage and ask again with --only, then queue --append)"}
+            return {"status": "EMPTY", "line": "EMPTY: the queue is done; go to the after-run steps"}
+        ref = st["queue"].pop(0)
         hit = index(load(root)).get(ref)
         model = item_model_spec(run, hit[1] if hit else None)
         if ref not in st["started"]:
             st["started"].append(ref)
     hit = index(load(root)).get(ref)
     size = st["sizes"].get(ref) or (item_size(hit[1]) if hit else "?")
+    entry = rework["entry"] if rework else ("\n".join(hit[0].raw.split("\n")[slice(*entry_span(*hit))]) if hit else "")
     st["current"] = {"id": ref, "before": git(root, "rev-parse", "--short", "HEAD"), "model": model,
-                     "escalated": escalated, "size": size}
+                     "escalated": escalated, "size": size, "entry": entry, "rework": rework}
     run.save()
     m = "inherit (omit `model`)" if model[0] == "inherit" else model[0]
-    print(f"NEXT: {ref} | model {m}" + (f" | effort {model[1]}" if model[1] else "") + f" | size {size}")
-    if note:
-        print(f"APPEND TO PROMPT: {note}")
+    line = f"NEXT: {ref} | model {m}" + (f" | effort {model[1]}" if model[1] else "") + f" | size {size}"
+    if rework:
+        line += f" | rework round {rework['round']}"
+        note = rework["note"]
+    return {"status": "NEXT", "id": ref, "model": model, "size": size, "note": note, "line": line, "rework": rework}
+
+
+def run_next(args):
+    if len(args) != 1:
+        print("usage: workflow-lists run next KIND")
+        return 2
+    _, run = need_state(args[0])
+    n = next_item(run)
+    print(n["line"])
+    if n.get("note"):
+        print(f"APPEND TO PROMPT: {n['note']}")
     return 0
 
 
-RESULT_LINE_RE = re.compile(r"^(BLOCKED|DEFAULTS|SCOPE|UNVERIFIED|RESULT):\s*(.*)$")
+RESULT_LINE_RE = re.compile(r"^(BLOCKED|DEFAULTS|SCOPE|UNVERIFIED|NOTE|RESULT):\s*(.*)$")
 
 
-def run_result(args):
-    opts, pos = take_opts(args, {"--review"}, {"--analysis"})
-    if len(pos) != 1:
-        print("usage: workflow-lists run result KIND [--review ID | --analysis] < the agent's answer")
-        return 2
-    root, run = need_run(pos[0])
-    st = run.state
-    answer = "" if sys.stdin.isatty() else sys.stdin.read()
-    found = [(m.group(1), m.group(2).strip()) for m in
-             (RESULT_LINE_RE.match(l.strip()) for l in answer.split("\n")) if m]
-    review = opts.get("--review") or opts.get("--analysis")
+def result_lines(answer):
+    return [(m.group(1), m.group(2).strip()) for m in
+            (RESULT_LINE_RE.match(l.strip()) for l in answer.split("\n")) if m]
+
+
+def test_note(run, ref, before):
+    """A NOTE line when the project has tests but the item's commits touched none."""
+    if not run.state.get("tests"):
+        return None
+    subjects = git(run.root, "log", "--format=%s", f"{before}..HEAD") or ""
+    if run.kind == "fixes" and not any(s.startswith("fix") for s in subjects.split("\n")):
+        return None
+    out = git(run.root, "diff", "--name-only", f"{before}..HEAD", "--", *LIST_EXCLUDES) or ""
+    files = [p for p in out.split("\n") if p]
+    if files and not any(TEST_PATH_RE.search(p) for p in files):
+        return f"{ref} — changed no test file (the project has tests)"
+    return None
+
+
+def apply_result(run, answer, review=None, analysis=False):
+    """Book an agent's answer. Returns the action line (CONTINUE / REVIEW: … / RETRY: … /
+    REWORK: … / STOP: …)."""
+    root, st = run.root, run.state
+    found = result_lines(answer)
     cur = st.get("current")
-    if not review and not cur:
-        print("no item is in progress (run next first)")
-        return 2
-    prefix = f"review {review} " if opts.get("--review") else ""
+    prefix = f"review {review} " if review else ""
     for key, val in found:
         run.log(f"{prefix}{key}: {val}")
     result = next((v for k, v in reversed(found) if k == "RESULT"), None)
+    if review and result:  # the words of review-change before plugin 4.0
+        result = re.sub(r"^CLEAN\b", "ACCEPTED", re.sub(r"^REVIEWED\b", "ACCEPTED", result))
 
-    if review:
+    if review or analysis:
         if dirty(root):
-            print(f"STOP: the tree is not clean after the {'review of ' + review if opts.get('--review') else 'analysis'}:\n{dirty(root)}")
-            return 1
-        print("CONTINUE")
-        return 0
+            st["current"] = None
+            run.save()
+            return f"STOP: the tree is not clean after the {'review of ' + review if review else 'analysis'}:\n{dirty(root)}"
+        if review and result and result.split()[0] == "REWORK":
+            reasons = re.sub(r"^REWORK\s*(?:—|-)?\s*", "", result)
+            rounds = st["settings"]["rework"]
+            done = st["reworked"].get(review, 0)
+            if done < rounds and cur and cur.get("id") == review:
+                st["reworked"][review] = done + 1
+                st["rework"] = {
+                    "id": review, "model": cur["model"], "entry": cur["entry"], "round": done + 1,
+                    "range": f"{cur['before']}..HEAD",
+                    "note": (f"A fresh review of your commits ({cur['before']}..HEAD) asks for rework: {reasons} "
+                             "Fix exactly that, verify again and commit a follow-up."),
+                }
+                st["current"] = None
+                run.save()
+                return f"REWORK: {review} (round {done + 1} of {rounds}) — {reasons}"
+            run.log(f"NOTE: {review} — review asked for rework after the last round: {reasons}")
+        st["current"] = None
+        run.save()
+        return "CONTINUE"
 
+    if not cur:
+        return "STOP: no item is in progress (run next first)"
     ref = cur["id"]
     word = result.split()[0] if result else "MISSING"
     if not result:
@@ -2051,9 +2202,8 @@ def run_result(args):
         if dirty(root):
             st["current"] = None
             run.save()
-            print(f"STOP: {ref} reported {word} but left the tree dirty:\n{dirty(root)}")
-            return 1
-        if word == "PARTIAL":
+            return f"STOP: {ref} reported {word} but left the tree dirty:\n{dirty(root)}"
+        if word == "PARTIAL" and not cur.get("rework"):
             st["partial"][ref] = st["partial"].get(ref, 0) + 1
             if st["partial"][ref] == 1:
                 st["queue"].append(ref)
@@ -2061,12 +2211,20 @@ def run_result(args):
             else:
                 run.log(f"skip {ref}")
                 print(f"{ref} is partly done a second time: left open")
+        tn = test_note(run, ref, cur["before"])
+        if tn:
+            run.log(f"NOTE: {tn}")
         lines = changed_lines(root, f"{cur['before']}..HEAD")
-        if review_due(st["settings"]["review"], run.kind, cur["size"], lines):
+        if cur.get("rework"):
+            cur["before"] = cur["rework"]["range"].split("..")[0]  # review the whole item again
+        final = st["reworked"].get(ref, 0) >= st["settings"]["rework"]
+        if cur.get("rework") or review_due(st["settings"]["review"], run.kind, cur["size"], lines):
             rm = st["settings"]["models"]["review"]
-            action = (f"REVIEW: {cur['before']}..HEAD {ref} | model "
+            action = (f"REVIEW: {cur['before']}..HEAD {ref}" + (" final" if final else "") + " | model "
                       + ("inherit (omit `model`)" if rm[0] == "inherit" else rm[0])
                       + (f" | effort {rm[1]}" if rm[1] else "") + f" ({lines} changed lines, size {cur['size']})")
+            run.save()  # keep `current` for the review's rework decision
+            return action
     elif word == "BLOCKED":
         if ref not in st["blocked"]:
             st["blocked"].append(ref)
@@ -2075,15 +2233,31 @@ def run_result(args):
     else:
         m = re.match(r"FAILED\s+\S+\s*(?:—|-)?\s*(.*)$", result or "")
         reason = (m.group(1) if m and m.group(1) else None) or ("no RESULT line" if not result else result)
-        branch = save_attempt(run, ref, reason)
+        branch = save_attempt(run, ref, reason, cur.get("before"))
         esc = st["settings"]["escalate"]
-        if esc and not cur["escalated"] and cur["model"][0] != esc:
+        if cur.get("rework"):
+            run.log(f"NOTE: {ref} — rework failed: {reason}; the reviewed commits stay as they were")
+        elif esc and not cur["escalated"] and cur["model"][0] != esc:
             st["retry"] = {"id": ref, "model": esc, "from": cur["model"][0], "reason": reason, "branch": branch}
             action = f"RETRY: {ref} once more with {esc} (run next gives the prompt addition)"
         else:
             action = record_failure(run, ref, cur["model"][0], reason)
     st["current"] = None
     run.save()
+    return action
+
+
+def run_result(args):
+    opts, pos = take_opts(args, {"--review"}, {"--analysis"})
+    if len(pos) != 1:
+        print("usage: workflow-lists run result KIND [--review ID | --analysis] < the agent's answer")
+        return 2
+    _, run = need_state(pos[0])
+    answer = "" if sys.stdin.isatty() else sys.stdin.read()
+    if not opts.get("--review") and not opts.get("--analysis") and not run.state.get("current"):
+        print("no item is in progress (run next first)")
+        return 2
+    action = apply_result(run, answer, review=opts.get("--review"), analysis=bool(opts.get("--analysis")))
     print(action)
     return 1 if action.startswith("STOP") else 0
 
@@ -2092,8 +2266,9 @@ def run_commit(args):
     if len(args) < 2:
         print('usage: workflow-lists run commit KIND "chore: <description>"')
         return 2
-    root, run = need_run(args[0])
-    files = [l[3:] for l in dirty(root).split("\n") if l and Path(l[3:]).name in LISTS]
+    root, run = need_state(args[0])
+    files = [m.group(1) for m in (re.match(r"^\s*[MADRCU?!]{1,2}\s+(.+)$", l) for l in dirty(root).split("\n"))
+             if m and Path(m.group(1)).name in LISTS]
     if not files:
         print("nothing to commit in the list files")
         return 0
@@ -2102,48 +2277,53 @@ def run_commit(args):
     return 0 if c else 1
 
 
+def change_size(run):
+    """(analyse?, reason, rows, total lines) of the change since the run's start."""
+    root, st = run.root, run.state
+    start = st["start"]
+    commits = git(root, "rev-list", "--count", f"{start}..HEAD") or "0"
+    if not st["settings"]["analyse"][run.kind] or commits == "0":
+        return False, ('off for ' + run.kind if not st['settings']['analyse'][run.kind] else 'no commits'), [], 0
+    ok, out = git_run(root, "diff", "--numstat", f"{start}..HEAD", "--", *LIST_EXCLUDES)
+    rows = [l.split("\t") for l in out.split("\n") if l.count("\t") == 2] if ok else []
+    total = sum(int(a) + int(b) for a, b, _ in rows if a.isdigit() and b.isdigit())
+    return True, "", rows, total
+
+
+def group_rows(rows):
+    groups = {}
+    for a, b, path in rows:
+        top = path.split("/")[0] if "/" in path else "."
+        g = groups.setdefault(top, [0, []])
+        g[0] += (int(a) if a.isdigit() else 0) + (int(b) if b.isdigit() else 0)
+        g[1].append(path)
+    return sorted(groups.items(), key=lambda x: -x[1][0])
+
+
 def run_changes(args):
     if len(args) != 1:
         print("usage: workflow-lists run changes KIND")
         return 2
-    root, run = need_run(args[0])
-    st = run.state
-    start = st["start"]
-    commits = git(root, "rev-list", "--count", f"{start}..HEAD") or "0"
-    if not st["settings"]["analyse"][run.kind] or commits == "0":
-        print(f"ANALYSE: no ({'off for ' + run.kind if not st['settings']['analyse'][run.kind] else 'no commits'})")
+    _, run = need_state(args[0])
+    yes, why, rows, total = change_size(run)
+    if not yes:
+        print(f"ANALYSE: no ({why})")
         return 0
-    ok, out = git_run(root, "diff", "--numstat", f"{start}..HEAD", "--", *LIST_EXCLUDES)
-    rows = [l.split("\t") for l in out.split("\n") if l.count("\t") == 2] if ok else []
-    total = sum(int(a) + int(b) for a, b, _ in rows if a.isdigit() and b.isdigit())
     large = len(rows) > 40 or total > 8000
-    print(f"ANALYSE: yes, since {start}: {plural(len(rows), 'file')}, {total} changed lines — "
+    print(f"ANALYSE: yes, since {run.state['start']}: {plural(len(rows), 'file')}, {total} changed lines — "
           + ("large: split it into parts" if large else "small: one agent"))
     if large:
-        groups = {}
-        for a, b, path in rows:
-            top = path.split("/")[0] if "/" in path else "."
-            g = groups.setdefault(top, [0, []])
-            g[0] += (int(a) if a.isdigit() else 0) + (int(b) if b.isdigit() else 0)
-            g[1].append(path)
-        for top, (n, paths) in sorted(groups.items(), key=lambda x: -x[1][0]):
+        for top, (n, paths) in group_rows(rows):
             print(f"  {top}/: {plural(len(paths), 'file')}, {n} lines")
         print(f"part output dir: {run.dir / 'analysis'}")
     return 0
 
 
-def run_end(args):
-    if len(args) != 1:
-        print("usage: workflow-lists run end KIND")
-        return 2
-    root, run = need_run(args[0])
-    st = run.state
-    if not st:
-        print("no run state")
-        return 2
+def run_report(run):
+    root, st = run.root, run.state
     run.log("end")
     log = run.log_lines()
-    done, partial, blocked, gone, failed, defaults, unverified, scopes, reviews, analysis, skipped = ([] for _ in range(11))
+    done, partial, blocked, gone, failed, defaults, unverified, scopes, reviews, analysis, skipped, notes = ([] for _ in range(12))
     for l in log:
         m = re.match(r"^(?:review (\S+) )?(\w+):\s*(.*)$", l)
         if l.startswith("gone "):
@@ -2154,13 +2334,14 @@ def run_end(args):
             skipped.append(l[5:])
         elif m:
             rid, key, val = m.groups()
-            if rid:
-                if key == "RESULT" and val.startswith("REVIEWED"):
+            if key == "NOTE":
+                notes.append((f"review of {rid}: " if rid else "") + val)
+            elif rid:
+                if key == "RESULT" and (not val.startswith("ACCEPTED") or len(val.split()) > 1):
                     reviews.append(f"{rid}: {val}")
                 elif key == "SCOPE":
                     scopes.append(val)
-                continue
-            if key == "RESULT":
+            elif key == "RESULT":
                 w = val.split()
                 if w and w[0] == "DONE" and len(w) > 1:
                     done.append(w[1])
@@ -2176,8 +2357,9 @@ def run_end(args):
                 unverified.append(val)
             elif key == "SCOPE":
                 scopes.append(val)
-    blocked = [b for b in blocked if b.split()[0] not in done]
-    print(f"REPORT: {run.kind} run from {st['start']} on {st['run_branch']}"
+    blocked = list(dict.fromkeys(b for b in blocked if b.split()[0] not in done))
+    notes = list(dict.fromkeys(notes))
+    print(f"REPORT: {run.kind} run from {st['start']} on {st['run_branch']} (plugin {st.get('plugin', '?')})"
           + (" (run branch: merge it yourself)" if st['run_branch'].startswith("workflow/") else ""))
     out = git(root, "log", "--oneline", f"{st['start']}..HEAD")
     print("commits:" + ("\n  " + out.replace("\n", "\n  ") if out else " none"))
@@ -2188,7 +2370,7 @@ def run_end(args):
             for r in rows:
                 print(f"  {r}")
 
-    block("done", [" ".join(done)] if done else [])
+    block("done", [" ".join(dict.fromkeys(done))] if done else [])
     block("partly done (rest still open)", partial)
     block("removed as already done (restore from git if wrong)", gone)
     block("blocked (decision needed)", blocked)
@@ -2199,7 +2381,8 @@ def run_end(args):
     block("failed (attempt on the branch)", failed)
     block("defaults chosen", defaults)
     block("not verified", unverified)
-    block("reviews that made changes", reviews)
+    block("notes from the agents (side issues, missing tests)", notes)
+    block("reviews that changed something or asked for rework", reviews)
     block("after-run analysis", analysis)
     block("commits without a fitting scope (suggested scopes)", scopes)
     if st["missing"]:
@@ -2209,8 +2392,217 @@ def run_end(args):
     if st["user_only"]:
         open_claude = sum(1 for it in lists["CLAUDE_ANALYSIS.md"].items() if "HOLD" not in it.tags)
         print(f"CLAUDE_ANALYSIS.md (not part of this run): {open_claude} open")
+    if st.get("spent"):
+        print(f"cost: {st['spent']:.2f} USD for the headless agents" + (f" (stats in {st['settings']['stats']})" if st["settings"].get("stats") else ""))
     print("nothing was pushed")
+
+
+def run_end(args):
+    if len(args) != 1:
+        print("usage: workflow-lists run end KIND")
+        return 2
+    _, run = need_state(args[0])
+    run.stat({"role": "run", "id": None, "outcome": "end", "cost_usd": 0.0,
+              "commits": int(git(run.root, "rev-list", "--count", f"{run.state['start']}..HEAD") or 0)})
+    run.save()
+    run_report(run)
     return 0
+
+
+# --------------------------------------------------------------------------- headless driver
+
+
+def headless(run, prompt, model, role):
+    """Run one `claude -p` agent and wait. Returns (answer text, stats record)."""
+    proc, t0 = headless_async(run, prompt, model, role)
+    if proc is None:
+        return f"RESULT: FAILED — could not start claude: {t0}", {"role": role, "model": model[0], "outcome": "error"}
+    return headless_wait(proc, t0, model, role)
+
+
+def plugin_prompt(skill, argument):
+    return (f"You are working in the repo at the current directory, unattended: nobody will answer "
+            f"questions. Invoke the `dev-workflow:{skill}` skill with the argument `{argument}` (if the "
+            f"Skill tool is unavailable, read `{PLUGIN_ROOT}/skills/{skill}/SKILL.md` and follow it "
+            f"exactly). Work on exactly that, and end with the lines that skill defines.")
+
+
+def rework_prompt(run, n):
+    r = n["rework"]
+    return (f"You are working in the repo at the current directory, unattended: nobody will answer "
+            f"questions. {r['note']}\n\nThe item is {n['id']}. Its list entry was already deleted (the "
+            f"lists are not yours to edit); it read:\n\n{r['entry']}\n\nRun `workflow-lists brief --context` "
+            f"for the rules, standards and verification, read `{PLUGIN_ROOT}/skills/setup-workflow/work-item.md` "
+            f"sections C to E and G, then do the rework: fix what the review asks, run the verification and "
+            f"the item's Verify steps, and commit the follow-up with the same commit type as the reviewed "
+            f"commits and their `Refs:` footer with `, rework` inside the parentheses. Keep your final answer "
+            f"to at most three plain lines plus the result lines of work-item.md section H, ending with "
+            f"`RESULT: DONE {n['id']} <short commit>` or `RESULT: FAILED {n['id']} — <reason>`.")
+
+
+def outcome_of(answer):
+    r = next((v for k, v in reversed(result_lines(answer)) if k == "RESULT"), "")
+    return (r.split() or ["MISSING"])[0]
+
+
+def run_go(args):
+    opts, pos = take_opts(args, {"--max", "--skip", "--footer", "--extra"}, {"--user-only", "--auto"})
+    if len(pos) != 1:
+        print("usage: workflow-lists run go fixes|features [--auto [--max N] [--skip IDS] [--footer TEXT] [--user-only]] [--extra ARGS]")
+        return 2
+    kind = pos[0]
+    root, run = need_run(kind)
+    if not run.state or opts.get("--auto"):
+        if not opts.get("--auto"):
+            print(f"no {kind} run is prepared: run the /{'fix-all-findings' if kind == 'fixes' else 'implement-all-features'} "
+                  "skill (triage and decisions), or `run go --auto` to queue only the items that are READY as written")
+            return 2
+        resumed = start_run(root, run, opts)
+        print_settings(run, resumed)
+        if not resumed or not run.state["queue"]:
+            lists = ["USER_ANALYSIS.md"] if opts.get("--user-only") else RUN_KINDS[kind]
+            out = subprocess.run([sys.executable, "-I", __file__, "triage", *lists, "--skip", opts.get("--skip", "")],
+                                 cwd=root, capture_output=True, text=True).stdout
+            ready = [l.split()[1] for l in out.split("\n") if l.startswith("READY: ")]
+            other = [l for l in out.split("\n") if l.startswith(("CHECK: ", "FAILED: "))]
+            if other:
+                print("left out (need triage with the skill):\n  " + "\n  ".join(other))
+            order = next((l[7:].split() for l in out.split("\n") if l.startswith("ORDER: ")), [])
+            run.state["queue"] = [r for r in order if r in ready]
+            run.save()
+            print(f"queue: {' '.join(run.state['queue']) or '(empty)'}")
+    st = run.state
+    extras = opts.get("--extra") or ("user-only" if st.get("user_only") else "")
+    skill = ITEM_SKILL[kind]
+    status = None
+    while True:
+        n = next_item(run)
+        status = n["status"]
+        if status != "NEXT":
+            print(n["line"])
+            break
+        print(n["line"], flush=True)
+        if n["rework"]:
+            prompt = rework_prompt(run, n)
+        else:
+            prompt = plugin_prompt(skill, f"{n['id']} unattended {extras}".strip())
+            if n["note"]:
+                prompt += "\n\n" + n["note"]
+        cur = dict(st["current"])
+        answer, rec = headless(run, prompt, n["model"], "item")
+        rec.update({"id": n["id"], "size": n["size"], "escalated": cur["escalated"],
+                    "rework_round": n["rework"]["round"] if n["rework"] else 0, "outcome": outcome_of(answer)})
+        run.stat(rec)
+        for line in answer.strip().split("\n")[-6:]:
+            if RESULT_LINE_RE.match(line.strip()):
+                print("  " + line.strip())
+        action = apply_result(run, answer)
+        print(action + (f"  [{rec.get('turns')} turns, {rec.get('cost_usd') or 0:.2f} USD]" if rec.get("turns") else ""), flush=True)
+        while action.startswith("REVIEW:"):
+            m = re.match(r"REVIEW: (\S+) (\S+)( final)? \| model (\S+)(?: \(omit `model`\))?(?: \| effort (\S+))?", action)
+            rng, ref, final, rmodel, reffort = m.group(1), m.group(2), bool(m.group(3)), m.group(4), m.group(5)
+            r_answer, r_rec = headless(run, plugin_prompt("review-change", f"{rng} {ref} unattended" + (" final" if final else "")),
+                                       [rmodel, reffort], "review")
+            r_rec.update({"id": ref, "size": n["size"], "outcome": outcome_of(r_answer)})
+            run.stat(r_rec)
+            for line in r_answer.strip().split("\n")[-6:]:
+                if RESULT_LINE_RE.match(line.strip()):
+                    print("  review " + line.strip())
+            action = apply_result(run, r_answer, review=ref)
+            print(action + (f"  [{r_rec.get('turns')} turns, {r_rec.get('cost_usd') or 0:.2f} USD]" if r_rec.get("turns") else ""), flush=True)
+        if action.startswith("STOP"):
+            status = "STOP"
+            break
+    if status == "REDECIDE":
+        run.save()
+        print("the run pauses: decide these items with the skill (it runs `run go` again afterwards)")
+        return 3
+    if status in ("EMPTY", "LIMIT"):
+        after_run(run)
+    run_end([kind])
+    return 1 if status == "STOP" else 0
+
+
+def after_run(run):
+    """The closing analysis of a run's changes, split into parallel part agents when large."""
+    root, st = run.root, run.state
+    yes, why, rows, total = change_size(run)
+    if not yes:
+        print(f"ANALYSE: no ({why})")
+        return
+    start = st["start"]
+    large = len(rows) > 40 or total > 8000
+    print(f"ANALYSE: since {start}, {plural(len(rows), 'file')}, {total} changed lines" + (", split into parts" if large else ""), flush=True)
+    amodel = st["settings"]["models"]["analysis"]
+    parts = ""
+    if large:
+        groups = group_rows(rows)
+        # 3-8 parts: merge the smallest top-level groups until at most 8 remain
+        while len(groups) > 8:
+            a, b = groups.pop(), groups.pop()
+            groups.append((f"{b[0]}+{a[0]}", [a[1][0] + b[1][0], a[1][1] + b[1][1]]))
+        out_dir = run.dir / "analysis"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        procs = []
+        for i, (top, (_, paths)) in enumerate(groups, 1):
+            prompt = (f"Read-only analysis; don't edit any project file. Read "
+                      f"`{PLUGIN_ROOT}/skills/analyse-code/part.md` and follow it as a part agent for "
+                      f"{' '.join(paths)} since {start}, `after-run`, with the output file `{out_dir / f'part-{i}.md'}`.")
+            procs.append((i, top, headless_async(run, prompt, amodel, "analysis-part")))
+        for i, top, (proc, t0) in procs:
+            answer, rec = headless_wait(proc, t0, amodel, "analysis-part")
+            rec.update({"id": f"part-{i}", "outcome": "done" if "PART DONE" in answer else outcome_of(answer)})
+            run.stat(rec)
+            print(f"  part {i} ({top}): {answer.strip().split(chr(10))[-1][:80]}", flush=True)
+        parts = f" parts={out_dir}"
+    answer, rec = headless(run, plugin_prompt("analyse-code", f"since={start} after-run{parts} unattended"), amodel, "analysis")
+    rec.update({"id": None, "outcome": outcome_of(answer)})
+    run.stat(rec)
+    action = apply_result(run, answer, analysis=True)
+    print(f"analysis: {next((v for k, v in result_lines(answer) if k == 'RESULT'), 'no RESULT line')}; {action}", flush=True)
+
+
+def headless_async(run, prompt, model, role):
+    """Start a `claude -p` agent without waiting. Items get the full limits, the other roles half."""
+    s = run.state["settings"]
+    turns, usd = s["limits"]["turns"], s["limits"]["usd"]
+    if role != "item":
+        turns, usd = max(10, turns // 2), usd / 2
+    exe = os.environ.get("WORKFLOW_LISTS_CLAUDE", "claude")
+    cmd = [exe, "-p", prompt, "--output-format", "json", "--no-session-persistence",
+           "--permission-mode", s["permissions"], "--max-turns", str(turns), "--max-budget-usd", str(usd)]
+    if model[0] and model[0] != "inherit":
+        cmd += ["--model", model[0]]
+    if model[1]:
+        cmd += ["--effort", model[1]]
+    env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
+    try:
+        return subprocess.Popen(cmd, cwd=run.root, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env), time.time()
+    except OSError as e:
+        return None, str(e)
+
+
+def headless_wait(proc, t0, model, role):
+    stdout, stderr = proc.communicate()
+    try:
+        data = json.loads(stdout)
+    except ValueError:
+        data = {}
+    usage = data.get("usage") or {}
+    rec = {"role": role, "model": model[0] or "inherit", "effort": model[1],
+           "models": sorted((data.get("modelUsage") or {}).keys()), "turns": data.get("num_turns"),
+           "duration_s": round(time.time() - t0, 1), "cost_usd": data.get("total_cost_usd"),
+           "input": usage.get("input_tokens"), "cache_write": usage.get("cache_creation_input_tokens"),
+           "cache_read": usage.get("cache_read_input_tokens"), "output": usage.get("output_tokens"),
+           "subtype": data.get("subtype")}
+    answer = data.get("result") or ""
+    if not data:
+        answer = f"RESULT: FAILED — claude exited {proc.returncode} without JSON output: {(stderr or stdout).strip()[-300:]}"
+    elif data.get("subtype") not in (None, "success"):
+        answer += f"\nRESULT: FAILED — the agent was stopped: {data['subtype']}"
+    elif data.get("is_error"):
+        answer += f"\nRESULT: FAILED — agent error: {str(data.get('result'))[:200]}"
+    return answer, rec
 
 
 RUN_COMMANDS = {
@@ -2223,7 +2615,138 @@ RUN_COMMANDS = {
     "commit": run_commit,
     "changes": run_changes,
     "end": run_end,
+    "go": run_go,
 }
+
+
+# --------------------------------------------------------------------------- stats
+
+
+def stats_path(args_file=None):
+    if args_file:
+        return Path(args_file).expanduser()
+    root = find_root(Path.cwd())
+    if (root / "USER_WORKFLOW.md").is_file():
+        cfg, _ = parse_runs(root)
+        if cfg["stats"]:
+            return Path(cfg["stats"]).expanduser()
+    return Path(DEFAULT_RUNS["stats"]).expanduser()
+
+
+def fmt_num(v, digits=0):
+    if v is None:
+        return "-"
+    return f"{v:,.{digits}f}"
+
+
+def cmd_stats(args):
+    opts, pos = take_opts(args, {"--file", "--project", "--since", "--by", "--role", "--kind"}, {"--items"})
+    path = stats_path(opts.get("--file"))
+    if not path.is_file():
+        print(f"no stats yet at {path}")
+        return 1
+    rows = []
+    for line in path.read_text(encoding="utf-8").split("\n"):
+        if line.strip():
+            try:
+                rows.append(json.loads(line))
+            except ValueError:
+                continue
+    role = opts.get("--role", "item")
+    rows = [r for r in rows if (role == "all" or r.get("role") == role)
+            and (not opts.get("--project") or r.get("project") == opts["--project"])
+            and (not opts.get("--kind") or r.get("kind") == opts["--kind"])
+            and (not opts.get("--since") or r.get("ts", "") >= opts["--since"])]
+    if not rows:
+        print(f"no matching rows in {path} (role {role})")
+        return 1
+    if opts.get("--items"):
+        print("ts                 project          plugin  kind      id        size model    turns   tokens   cost  outcome")
+        for r in rows:
+            toks = sum(r.get(k) or 0 for k in ("input", "cache_write", "cache_read"))
+            print(f"{(r.get('ts') or '')[:16]:<19}{(r.get('project') or '')[:16]:<17}{(r.get('plugin') or ''):<8}"
+                  f"{(r.get('kind') or ''):<10}{str(r.get('id') or ''):<10}{str(r.get('size') or ''):<5}"
+                  f"{(r.get('model') or '')[:8]:<9}{fmt_num(r.get('turns')):>5}{fmt_num(toks):>10}{fmt_num(r.get('cost_usd'), 2):>7}  {r.get('outcome') or ''}")
+        return 0
+    import statistics
+    keys = [k.strip() for k in (opts.get("--by") or "plugin").split(",")]
+    groups = {}
+    for r in rows:
+        groups.setdefault(tuple(str(r.get({"version": "plugin"}.get(k, k)) or "-") for k in keys), []).append(r)
+
+    def med(vals, digits=0):
+        vals = [v for v in vals if v is not None]
+        return fmt_num(statistics.median(vals), digits) if vals else "-"
+
+    head = " | ".join(keys)
+    print(f"{head:<28} agents  done%   med turns  med tokens(ctx)  med out  med cost  total cost")
+    for key, rs in sorted(groups.items()):
+        done = sum(1 for r in rs if r.get("outcome") in ("DONE", "PARTIAL", "ACCEPTED", "done", "ANALYSED"))
+        toks = [sum(r.get(k) or 0 for k in ("input", "cache_write", "cache_read")) for r in rs if r.get("turns") is not None]
+        print(f"{' | '.join(key):<28}{len(rs):>7}{100 * done // len(rs):>6}%{med([r.get('turns') for r in rs]):>11}"
+              f"{med(toks):>16}{med([r.get('output') for r in rs]):>9}{med([r.get('cost_usd') for r in rs], 2):>10}"
+              f"{fmt_num(sum(r.get('cost_usd') or 0 for r in rs), 2):>12}")
+    print(f"({len(rows)} rows, role {role}, from {path}; tokens(ctx) = input + cache write + cache read per agent)")
+    return 0
+
+
+# --------------------------------------------------------------------------- brief
+
+
+def cmd_brief(args):
+    if len(args) != 1:
+        print("usage: workflow-lists brief ID | --context")
+        return 2
+    root = setup_root()
+    lists = load(root)
+    it = None
+    if args[0] != "--context":
+        hit = index(lists).get(args[0])
+        if not hit:
+            print(f"not found: {args[0]} (no open entry with this id)")
+            return 1
+        lf, it = hit
+        a, b = entry_span(lf, it)
+        print(f"==> {lf.name}:{it.line} (the item)")
+        print("\n".join(lf.raw.split("\n")[a:b]))
+    keep = it.field("keep open for") if it else None
+    if keep:
+        refs = [m.group(0) for m in PLAN_REF_RE.finditer(re.sub(r'"[^"]*"|“[^”]*”', "", keep))]
+        for ref in refs:
+            h = index(lists).get(ref)
+            if h:
+                x, y = entry_span(*h)
+                print(f"\n==> {h[0].name}:{h[1].line} (Keep open for: {ref})")
+                print("\n".join(h[0].raw.split("\n")[x:y]))
+    rules = PLUGIN_ROOT / "skills" / "setup-workflow" / "item-rules.md"
+    if rules.is_file():
+        print("\n==> rules (item-rules.md)")
+        print(rules.read_text(encoding="utf-8").strip())
+    uw = (root / "USER_WORKFLOW.md").read_text(encoding="utf-8").split("\n")
+    masked = masked_lines("\n".join(uw))
+    starts = [n for n, line in enumerate(masked) if re.match(r"^#{1,2} ", line)] + [len(uw)]
+    for want in ("design docs", "code standards", "hands-off", "ask before", "commits"):
+        k = next((i for i, n in enumerate(starts[:-1]) if masked[n].startswith("## ") and masked[n][3:].strip().lower().startswith(want)), None)
+        if k is not None:
+            print(f"\n==> USER_WORKFLOW.md")
+            print("\n".join(trim(uw[starts[k]:starts[k + 1]])))
+    cm = root / "CLAUDE.md"
+    if cm.is_file():
+        lines = masked_lines(cm.read_text(encoding="utf-8"))
+        body = section_body(lines, "Workflow")
+        raw = cm.read_text(encoding="utf-8").split("\n")
+        for sub in ("### Code scope", "### Verification"):
+            idx = [n for n, t in body if t.strip() == sub]
+            if idx:
+                k = idx[0] - 1
+                j = k + 1
+                while j < len(raw) and not re.match(r"^#{1,3} ", raw[j]):
+                    j += 1
+                print(f"\n==> CLAUDE.md")
+                print("\n".join(trim(raw[k:j])))
+    print(f"\n==> repo: HEAD {git(root, 'rev-parse', '--short', 'HEAD') or 'no commit'}; "
+          + ("tree clean" if not dirty(root) else "uncommitted changes (not yours; leave them):\n" + dirty(root)))
+    return 0
 
 
 COMMANDS = {
@@ -2231,6 +2754,7 @@ COMMANDS = {
     "summary": cmd_summary,
     "show": cmd_show,
     "section": cmd_section,
+    "brief": cmd_brief,
     "stamp": cmd_stamp,
     "delete": cmd_delete,
     "set": cmd_set,
@@ -2240,6 +2764,7 @@ COMMANDS = {
     "find": cmd_find,
     "triage": cmd_triage,
     "run": cmd_run,
+    "stats": cmd_stats,
     "hook": cmd_hook,
 }
 

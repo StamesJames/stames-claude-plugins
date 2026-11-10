@@ -120,21 +120,33 @@ design questions.
 
 ## Runs
 
-Settings for `/fix-all-findings` and `/implement-all-features` (one fresh agent per item). An
-item's `**Model:**` line overrides the model for that item.
+Settings for `/fix-all-findings` and `/implement-all-features`. After triage and your
+decisions, `workflow-lists run go` builds the queue unattended: one fresh headless agent
+(`claude -p`) per item, reviewed, reworked, retried and analysed as set here. An item's
+`**Model:**` line overrides the model for that item.
 
-- Models: triage `opus`, features `opus`, fixes `sonnet`, review `sonnet`, analysis `sonnet`
-  <!-- haiku | sonnet | opus | inherit (the session's model); add "reasoning <level>" after a
-  model to set its effort, e.g. `opus, reasoning high` -->
+- Models: triage `opus`, features `opus`, fixes `sonnet`, review `opus`, analysis `sonnet`
+  <!-- haiku | sonnet | opus | inherit (your default model); add "reasoning <level>" after a
+  model to set its effort, e.g. `opus, reasoning high`. The reviewer is the acceptance gate:
+  keep it at least as strong as the model whose work it checks. -->
 - Escalate failed items to: `opus` <!-- retried once with this model before the item counts
   as failed; `none` to turn off -->
-- Fresh review: features of size M or L, and any item whose diff has more than 150 changed
-  lines <!-- or `always`, `never` -->
+- Fresh review: features always; fixes of size M or L, or more than 150 changed lines
+  <!-- per kind: `always`, `never`, `of size M or L`, `more than <n> changed lines` -->
+- Rework rounds: 1 <!-- how often a review may send an item back before it is accepted
+  as it is (with notes); 0 to turn off -->
 - Analyse after run: features yes, fixes no
 - Stop after consecutive failures: 3
 - Run branch: no <!-- yes: a run started on the default branch commits to
   `workflow/<date>-<kind>` instead. Failed attempts always go to `workflow/failed/<item>`. -->
-
+- Limits per agent: 80 turns, 5 USD <!-- an item agent that hits one counts as failed;
+  reviews and analyses get half -->
+- Headless permissions: bypassPermissions <!-- the `--permission-mode` of the headless
+  agents: `bypassPermissions` inside a sandbox, otherwise `dontAsk` with an allowlist in
+  your settings -->
+- Stats file: `~/.claude/dev-workflow/stats.jsonl` <!-- one line per agent and run (plugin
+  version, model, turns, tokens, cost, outcome), read by `workflow-lists stats`; `none` to
+  turn off -->
 ---
 
 ## Commits

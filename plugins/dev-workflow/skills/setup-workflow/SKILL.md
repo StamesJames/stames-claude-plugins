@@ -54,7 +54,8 @@ Draft `USER_WORKFLOW.md` from the template and the `## Workflow` section from
 `templates/claude-md-section.md`, filled with what you found. Keep the template's `## Commits`
 section as it is (it is the user's default) apart from the scope list. Show the user a short
 summary of the draft: design docs, idea sources, analysis focus, code standards, hands-off
-paths, ask-before rules, run settings (models), scopes, verification commands. Then ask with
+paths, ask-before rules, run settings (models, limits, headless permissions, stats file),
+scopes, verification commands. Then ask with
 `AskUserQuestion` only what you could not settle yourself, for example:
 
 - verification commands, if none were found or they don't run;

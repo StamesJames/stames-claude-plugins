@@ -56,6 +56,10 @@ what constrains it. Stay read-only. Then work out:
   out), behaviour in edge cases, what counts as done; plus anything under **Ask before** or
   that contradicts the design docs. Only what changes the build: decide small details (exact
   numbers, colours, wording, layout) yourself and list them.
+- **How it is verified:** for each feature, the concrete checks that show **Done when:**
+  holds: a test to add (what it asserts), a command and its expected output, or an
+  observable behaviour and how to trigger it. The implementing agent runs them, the
+  reviewer re-runs them; a Done when nobody can check is not done.
 - **Keep open for:** other open ideas (`USER_IDEAS.md`, `CLAUDE_IDEAS.md`) the implementation
   should not block.
 
@@ -64,8 +68,8 @@ subagent per idea (in parallel; model `triage` from `## Runs`, omitted for `inhe
 told to read the plan format (`workflow-lists section
 ${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md "The plan"`), `CLAUDE.md`,
 `USER_WORKFLOW.md`, its idea and the code it touches, and to answer only with the points
-above: restatement, already-there verdict, proposed features (title, What, Done when, How,
-Size), questions with options and a recommendation, Keep open for candidates. Write the entries yourself from their answers.
+above: restatement, already-there verdict, proposed features (title, What, Done when,
+Verify, How, Size), questions with options and a recommendation, Keep open for candidates. Write the entries yourself from their answers.
 
 ## 3. Ask the user
 
@@ -81,17 +85,18 @@ Lead the conversation; the user should mostly pick options, not write specs.
    the user decides whether to go ahead (then the entry's **Decisions:** says so) or adjust.
 3. Further rounds only if answers opened new questions (in depth: three rounds at most;
    batch: two). An idea still open after that stays an idea (step 5).
-4. Show the final entries in short form (id, title, the idea it came from, Done when, size,
-   decisions) and ask with `AskUserQuestion`: `Write them` (recommended), `Change something`
-   (adjust and ask again). Anything the user wants dropped or kept as an idea, they say here.
+4. Show the final entries in short form (id, title, the idea it came from, Done when, how it
+   is verified, size, decisions) and ask with `AskUserQuestion`: `Write them` (recommended),
+   `Change something` (adjust and ask again). Anything the user wants dropped or kept as an
+   idea, they say here.
 
 ## 4. Write `CLAUDE_PLAN.md`
 
 Write each entry with `workflow-lists add CLAUDE_PLAN.md --sev <H|M|L> --title "<title>"
 [--model <spec>] [--before <id>]` and its body on stdin, in the full format of
 `list-format.md`: **Idea:** (the idea's id and a few words, or the user's wish), **What**,
-**Why**, **Done when:**, **Design docs**, **How** (with "needs F<n>" where a feature builds on
-another), **Size**, **Decisions:** (the user's answers, in their words where they wrote their
+**Why**, **Done when:**, **Verify:** (the checks from step 2), **Design docs**, **How** (with
+"needs F<n>" where a feature builds on another), **Size**, **Decisions:** (the user's answers, in their words where they wrote their
 own, and your listed small details, with the date), **Keep open for:** if any. `--model` only
 if the pick differs from the default `features` model (`list-format.md` → "Choosing a
 model"). Severity from the idea, M if it has none; if the user decided to go against the
