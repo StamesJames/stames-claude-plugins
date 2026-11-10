@@ -52,8 +52,8 @@ With `parts=`, skip this step: the parts are read.
 - **Incremental / `since=`:** `git diff --stat <base>..HEAD` and `git log --oneline
   <base>..HEAD`. The scope is the changed files in the code scope, plus direct users of what
   changed (callers of changed functions, readers of changed data) where the change could
-  break them: at most about ten such files per change; if there are more, read a sample and
-  note it in the report. Existing findings in those files get re-checked; the others stay
+  break them: at most about ten such files for the whole pass, however many commits it
+  covers (pick those most likely to break); if there are more, note the rest in the report. Existing findings in those files get re-checked; the others stay
   as they are. If nothing in the code scope changed, record an empty pass.
 - **Focus:** everything that belongs to the focus area.
 - **`full`:** the whole code scope from `CLAUDE.md`, plus the config and data files a finding

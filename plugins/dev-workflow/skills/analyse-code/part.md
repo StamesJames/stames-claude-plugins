@@ -16,7 +16,8 @@ Read-only: edit no project file and no list file.
    `workflow-lists section <this file's directory>/../setup-workflow/list-format.md "Choosing a model"`.
 2. With a base commit: `git diff <base>..HEAD -- <paths>`; read the changed code and its
    surroundings, plus direct users of what changed where the change could break them (at
-   most about ten files; if there are more, read a sample and say so in a `CROSS:` note).
+   most about ten such files for the whole part, however many commits it covers; if there
+   are more, pick those most likely to break and name the rest in a `CROSS:` note).
    Without one: read the paths in full.
 3. Apply the checks below. Skip generated code and the hands-off paths.
 4. Return every finding as: `SECTION <1|2|3> | <H|M|L> | <title>`, then `paths:` with lines,
