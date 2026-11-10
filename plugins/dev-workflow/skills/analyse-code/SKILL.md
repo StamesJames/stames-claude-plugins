@@ -22,7 +22,7 @@ Arguments (all optional):
 - `unattended` (run in a subagent by a loop): never ask, end with the lines from step 6.
 
 Without `full`, `since=` or a focus, the pass is **incremental**: what changed since the
-commit of the last pass in the **Passes** list. If that commit no longer exists
+commit of the last pass in the **Passes** list (`grep '^- .* at ' CLAUDE_ANALYSIS.md | tail -1`). If that commit no longer exists
 (`git cat-file -e <commit>` fails, e.g. after a rebase or a squash merge), use the last
 commit before the day of that pass instead
 (`git rev-list -1 --before='<pass date> 00:00' HEAD`). Only if there was no pass yet, or no
@@ -33,15 +33,22 @@ be large).
 
 1. If `USER_WORKFLOW.md` is missing, the project isn't set up for this workflow: tell the user
    to run `/setup-workflow` and stop.
-2. Read `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md` (the list format and
-   rules) and `${CLAUDE_PLUGIN_ROOT}/skills/analyse-code/part.md` (the checks).
+2. Read part 1 of `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md`
+   (`sed '/^# Part 2/,$d' <file>`) and of part 2 only
+   `workflow-lists section <that file> "Analysis files" "Choosing a model"`, and
+   `${CLAUDE_PLUGIN_ROOT}/skills/analyse-code/part.md` (the checks).
 3. Use `CLAUDE.md` (already in your context; read the file only if it isn't); its `## Workflow`
-   section gives the code scope and verification. Read `USER_WORKFLOW.md` (analysis focus,
-   things not to flag, code standards, hands-off paths, `## Runs` for the default `fixes`
-   model), the current `CLAUDE_ANALYSIS.md` and the user's `USER_ANALYSIS.md`. Never edit
-   `USER_ANALYSIS.md` in a pass and don't copy its items into `CLAUDE_ANALYSIS.md`. If your
-   analysis finds the cause of one of the user's items, or shows one is already fixed, say so
-   in the report instead.
+   section gives the code scope and verification. Of `USER_WORKFLOW.md` read only
+   `workflow-lists section USER_WORKFLOW.md "Analysis focus" "Code standards" "Hands-off" "Runs" "Commits"`
+   (`## Runs` gives the default `fixes` model).
+4. Of the lists, read only what the pass needs, never the whole files: `workflow-lists summary
+   CLAUDE_ANALYSIS.md USER_ANALYSIS.md` (the titles of all open findings, to avoid
+   duplicates), and the findings in the scope once it is known (step 2): `workflow-lists find
+   --show --since <base>` for an incremental pass, `workflow-lists find --show <paths>` for a
+   focus; a `full` pass reads both files. Entries that cite no file are listed by id: `show`
+   one only if its title may concern the scope. Never edit `USER_ANALYSIS.md` in a pass and
+   don't copy its items into `CLAUDE_ANALYSIS.md`. If your analysis finds the cause of one of
+   the user's items, or shows one is already fixed, say so in the report instead.
 
 ## 2. Decide what to read
 
@@ -51,8 +58,9 @@ With `parts=`, skip this step: the parts are read.
   <base>..HEAD`. The scope is the changed files in the code scope, plus direct users of what
   changed (callers of changed functions, readers of changed data) where the change could
   break them: at most about ten such files for the whole pass, however many commits it
-  covers (pick those most likely to break); if there are more, note the rest in the report. Existing findings in those files get re-checked; the others stay
-  as they are. If nothing in the code scope changed, record an empty pass.
+  covers (pick those most likely to break); if there are more, note the rest in the report.
+  Existing findings in those files (the `find` output of step 1.4) get re-checked; the
+  others stay as they are. If nothing in the code scope changed, record an empty pass.
 - **Focus:** everything that belongs to the focus area.
 - **`full`:** the whole code scope from `CLAUDE.md`, plus the config and data files a finding
   depends on.
