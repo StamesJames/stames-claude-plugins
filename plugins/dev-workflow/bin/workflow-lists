@@ -94,6 +94,7 @@ PASS_RE = re.compile(rf"^- {DATE} at {COMMIT}: .+")
 DROPPED_RE = re.compile(r"^- (?P<id>[FI]\d+) .+ — .+ \(\d{4}-\d{2}-\d{2}[^)]*\)\.?$")
 PLAN_REF_RE = re.compile(r"(?<![\w:])(?P<claude>claude:)?(?P<id>[FI]\d+)\b")
 ANALYSIS_REF_RE = re.compile(r"\*\*(?P<user>U)?(?P<id>\d+\.\d+)\*\*")
+PLAN_BOLD_REF_RE = re.compile(r"\*\*(?P<claude>claude:)?(?P<id>[FI]\d+)\*\*")
 
 
 # --------------------------------------------------------------------------- helpers
@@ -497,7 +498,7 @@ def check_references(lists, probs):
                     if not resolve(lists, target, m.group("id")):
                         probs.add("error", name, n, f"suggested order names {m.group(0)}, which is not an open item", about=target)
             else:
-                for m in PLAN_REF_RE.finditer(t):
+                for m in PLAN_BOLD_REF_RE.finditer(t):
                     target = plan_ref_file(m)
                     if not resolve(lists, target, m.group("id")):
                         probs.add("error", name, n, f"suggested order names {m.group(0)}, which is not an open item", about=target)
