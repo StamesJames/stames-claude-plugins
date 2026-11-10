@@ -100,9 +100,12 @@ How the pieces fit:
     letters are referenced by `fix-next-finding` and `implement-next-feature`; keep them
     stable or update those skills.
   - `loop.md`: the run protocol (up-front triage and decisions, one subagent per item,
-    review subagent, failure handling with WIP branches and model escalation, after-run
-    analysis). Changing `work-item.md`'s `RESULT:` lines or arguments, or `review-change` /
-    `analyse-code` result lines, means updating `loop.md` too.
+    review subagent, after-run analysis). The mechanics (run state, queue, review decision,
+    WIP branches, escalation, failure stamps, report) are in `workflow-lists run`; `loop.md`
+    only says when to call it and what to do with its answer. Changing `work-item.md`'s
+    `RESULT:` / `BLOCKED:` / `DEFAULTS:` / `UNVERIFIED:` lines or arguments, or
+    `review-change` / `analyse-code` result lines, means updating `loop.md` and
+    `workflow-lists run result` too.
 - `skills/setup-workflow/templates/` holds the templates `/setup-workflow` copies into a target
   project (the five lists, `USER_WORKFLOW.md`, and `claude-md-section.md` for the target's
   `CLAUDE.md`). If a rule or section changes, check whether the templates and the "Check" mode
@@ -126,20 +129,27 @@ How the pieces fit:
   unattended. `analyse-code/part.md` holds the analysis checks and the read-only part-agent
   protocol; large after-run analyses are split by `loop.md` itself (subagents can't spawn),
   with part findings written to `$(git rev-parse --git-path workflow-run)/analysis/`, next to
-  the run log `loop.md` keeps there.
-- **Token budget:** skills read only the parts of files they need, via `workflow-lists show`
-  / `section` and part 1 of `list-format.md`. The headings these calls name are load-bearing:
-  `USER_WORKFLOW.md` → `Design docs`, `Code standards`, `Hands-off`, `Ask before`,
-  `Commits`, `Analysis focus`, `Runs`; `list-format.md` → `# Part 2`, `Commit footer`,
-  `Scope reporting`, `The plan`, `Choosing a model`. Renaming one means updating the calls.
-- **`bin/workflow-lists`** (Python 3, stdlib only) checks the mechanical part of
-  `list-format.md` (`check`), summarises open items (`summary`), prints single entries
-  (`show <id>`) and file sections (`section <file> <heading>`, used to read only parts of
-  `USER_WORKFLOW.md` and `list-format.md`) and prints stamps (`stamp`);
+  the run log and state (`<kind>.log`, `<kind>.json`) that `workflow-lists run` keeps there.
+- **Token budget:** skills read only the parts of files they need (`workflow-lists show` /
+  `summary` / `find` / `section`, part 1 of `list-format.md`), use the `CLAUDE.md` already in
+  their context instead of reading it, and edit lists through the script instead of
+  Read/Edit. The headings these calls name are load-bearing: `USER_WORKFLOW.md` →
+  `Design docs`, `Code standards`, `Hands-off`, `Ask before`, `Commits`, `Analysis focus`,
+  `Runs`; `list-format.md` → `# Part 2`, `Commit footer`, `Scope reporting`,
+  `Analysis files`, `The plan`, `Idea files`, `Choosing a model`; `CLAUDE_IDEAS.md` →
+  `Dropped`. Renaming one means updating the calls.
+- **`bin/workflow-lists`** (Python 3, stdlib only) does everything mechanical about the lists:
+  reading (`check`, `summary`, `show`, `find`, `section`, `stamp`), editing (`add`, `delete`,
+  `set`, `move`, `pass`: ids, stamps, mentions, `_No open items._`, failed branches), the
+  run order and mechanical triage (`triage`) and the run state (`run …`). It parses
+  suggested-order steps (`1. **1.1** + **3.2**: why`) and `**Keep open for:**` lines in the
+  format `list-format.md` gives, and prints what it can't edit as `file:line`.
   `hooks/hooks.json` runs `workflow-lists hook` after `Write`/`Edit` of a list file. When a
   list rule, section name, entry field, template or `USER_WORKFLOW.md` → `## Runs` setting
   changes, update the script too (it reads the `USER_WORKFLOW.md` template itself), then
-  run `workflow-lists check` against fresh templates in a scratch git repo: it must print `OK`.
+  run `workflow-lists check` against fresh templates in a scratch git repo: it must print
+  `OK`. A change to the editing or `run` commands is tested the same way: add entries, then
+  delete / set / run them in the scratch repo and check the files and the output.
 
 Cross-skill references use `${CLAUDE_PLUGIN_ROOT}/skills/...` paths and the
 `dev-workflow:<skill>` skill names; keep both in sync when renaming or moving skills.

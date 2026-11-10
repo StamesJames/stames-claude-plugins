@@ -20,12 +20,15 @@ on `workflow/failed/<item>` branches, larger items get a fresh review, and featu
 with an analysis of what changed (split across agents when the run was large). Models per kind of work are set in the project's
 `USER_WORKFLOW.md` (`## Runs`) and can be overridden per item.
 
-The list rules are checked mechanically by the bundled `workflow-lists` command (Python 3,
-on the Bash tool's `PATH` while the plugin is enabled): `check` validates the lists, `summary`
-prints one line per open item, `show` prints single entries and `section` single sections of
-a file (so agents read only what they need), `stamp` prints the stamp value. A `PostToolUse` hook runs the
-check after every edit to a list file and reports only errors. Because of the `bin/`
-directory the plugin is for Claude Code only (Cowork and claude.ai don't install it).
+Everything mechanical is done by the bundled `workflow-lists` command (Python 3, on the Bash
+tool's `PATH` while the plugin is enabled), so agents spend tokens on the work, not on
+bookkeeping: it checks the lists (`check`), prints only what an agent needs (`summary`,
+`show`, `find`, `section`), edits entries (`add`, `delete`, `set`, `move`, `pass`: ids, stamps,
+mentions, failed branches), orders and pre-triages a run (`triage`) and holds a run's state
+(`run`: queue, escalation, failures, review decision, report), so long runs survive
+interruptions and context compaction. A `PostToolUse` hook runs the check after every hand
+edit of a list file and reports only errors. Because of the `bin/` directory the plugin is
+for Claude Code only (Cowork and claude.ai don't install it).
 
 Run them as `/dev-workflow:<skill>` (or just `/<skill>` when the name is unambiguous).
 Start in a project with `/dev-workflow:setup-workflow`.
