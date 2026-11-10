@@ -19,6 +19,8 @@ Run from the target project (any directory inside its git repo):
   workflow-lists pass FILE TEXT                    add a stamped line to the Passes list
   workflow-lists find [--since COMMIT] [--show] [PATH...]
                                                    analysis entries citing these files
+  workflow-lists triage LIST... [--skip IDS] [--only IDS]
+                                                   work order and mechanical triage for a run
   workflow-lists hook                              PostToolUse hook (reads hook JSON on stdin)
 
 The rules checked here are the mechanical part of
@@ -1471,6 +1473,163 @@ def cmd_find(args):
     return 0
 
 
+SEV_RANK = {"H": 0, "M": 1, "L": 2}
+SIZE_RANK = {"S": 0, "M": 1, "L": 2}
+NEEDS_RE = re.compile(r"\bneeds\s+(?:\*\*)?(F\d+)", re.I)
+PLAN_FIELDS = ["what", "why", "done when", "design docs", "how", "size"]
+
+
+def item_size(it):
+    m = re.match(r"^\W*([SML])\b", it.field("size", "effort") or "")
+    return m.group(1) if m else "?"
+
+
+def item_model(it):
+    for _, t in it.body:
+        if t.strip().startswith("**Model:**"):
+            return t.strip()[len("**Model:**"):].strip().replace("`", "")
+    return "default"
+
+
+def item_failed(it):
+    for _, t in it.body:
+        m = FAILED_RE.match(t.strip())
+        if m:
+            return m
+    return None
+
+
+def order_rank(lists, lf):
+    """ref -> position in the file's suggested-order section."""
+    sec = lf.section(role="order")
+    rank = {}
+    if not sec:
+        return rank
+    for _, t in sec.text:
+        for b in BOLD_RE.findall(t):
+            if lf.kind == "analysis":
+                ref = b if b.startswith("U") or lf.name == "CLAUDE_ANALYSIS.md" else "U" + b
+            else:
+                ref = b
+            rank.setdefault(ref, len(rank))
+    return rank
+
+
+def work_order(lists, items):
+    """Order (ListFile, Item) pairs: suggested order, then what others build on, severity,
+    size, file order; the user's findings before Claude's of the same or lower severity."""
+    def key(pair, rank):
+        lf, it = pair
+        return (rank.get(it.ref, 10 ** 6), SEV_RANK.get(it.severity, 1), SIZE_RANK.get(item_size(it), 3), it.line)
+
+    by_file = {}
+    for pair in items:
+        by_file.setdefault(pair[0].name, []).append(pair)
+    queues = {name: sorted(pairs, key=lambda p: key(p, order_rank(lists, p[0]))) for name, pairs in by_file.items()}
+    user, claude = queues.get("USER_ANALYSIS.md", []), queues.get("CLAUDE_ANALYSIS.md", [])
+    merged = []
+    while user or claude:
+        if user and (not claude or SEV_RANK.get(claude[0][1].severity, 1) >= SEV_RANK.get(user[0][1].severity, 1)):
+            merged.append(user.pop(0))
+        else:
+            merged.append(claude.pop(0))
+    merged += queues.get("CLAUDE_PLAN.md", [])
+    # what others build on ("needs F2") goes first
+    refs = [it.ref for _, it in merged]
+    needs = {it.ref: [n for n in NEEDS_RE.findall("\n".join(t for _, t in it.body)) if n in refs and n != it.ref]
+             for _, it in merged}
+    out, seen = [], set()
+
+    def visit(ref, stack=()):
+        if ref in seen or ref in stack:
+            return
+        for n in needs.get(ref, []):
+            visit(n, stack + (ref,))
+        seen.add(ref)
+        out.append(ref)
+
+    for r in refs:
+        visit(r)
+    pairs = {it.ref: (lf, it) for lf, it in merged}
+    return [pairs[r] for r in out]
+
+
+def triage_reason(root, lf, it):
+    """Why an entry needs a look at the code before a run, or None if it is READY as written."""
+    if lf.kind == "analysis":
+        text = "\n".join(t for _, t in it.body).lower() + it.title.lower()
+        if re.search(r"\b(verify|possible|possibly)\b", text):
+            return "marked verify/possible"
+        if lf.user and not cited_paths(lf, it):
+            return "user finding citing no file"
+        return "is it still there, is the fix clear"
+    if "CONFLICT" in it.tags:
+        return "[CONFLICT]"
+    have = it.fields() | ({"size"} if "effort" in it.fields() else set())
+    missing = [f for f in PLAN_FIELDS if f not in have]
+    if missing:
+        return "written or edited by hand (no " + ", ".join(missing) + ")"
+    stamp = next((t for _, t in it.body if t.strip().startswith("_Written:")), "")
+    m = re.search(r"\(`?([0-9a-f]{4,40})`?\)", stamp)
+    cited = cited_paths(lf, it)
+    if m and cited:
+        out = git(root, "diff", "--name-only", f"{m.group(1)}..HEAD")
+        if out:
+            changed = [p for p in out.split("\n") if Path(p).name not in LISTS]
+            hit = [c for c in cited if any(p == c or p.endswith("/" + c) or p.startswith(c + "/") for p in changed)]
+            if hit:
+                return "cited files changed since it was written (" + ", ".join(sorted(hit)[:3]) + ")"
+    return None
+
+
+def cmd_triage(args):
+    opts, files = take_opts(args, {"--skip", "--only"})
+    files = pick_files(files)
+    if not files:
+        print("usage: workflow-lists triage LIST... [--skip IDS] [--only IDS]   (ids comma- or space-separated)")
+        return 2
+    root = setup_root()
+    lists = load(root)
+    skip = set(re.split(r"[,\s]+", opts.get("--skip", "")) ) - {""}
+    only = set(re.split(r"[,\s]+", opts.get("--only", ""))) - {""}
+    items, held, skipped = [], [], []
+    for name in files:
+        lf = lists[name]
+        for it in lf.items(ideas=False):
+            if only and it.ref not in only:
+                continue
+            if "HOLD" in it.tags:
+                held.append(it.ref)
+            elif it.ref in skip:
+                skipped.append(it.ref)
+            else:
+                items.append((lf, it))
+    ordered = work_order(lists, items)
+    print("ORDER: " + " ".join(it.ref for _, it in ordered))
+    counts = {"READY": 0, "FAILED": 0, "CHECK": 0}
+    for lf, it in ordered:
+        head = f"{it.ref} | size {item_size(it)} | model {item_model(it)}"
+        f = item_failed(it)
+        if f:
+            counts["FAILED"] += 1
+            where = f.group("branch") or "no changes"
+            print(f"FAILED: {head} | {it.title} — {where}, {f.group('model')}: {f.group('reason')}")
+            continue
+        why = triage_reason(root, lf, it)
+        if why:
+            counts["CHECK"] += 1
+            print(f"CHECK: {head} | {it.title} — {why}")
+        else:
+            counts["READY"] += 1
+            print(f"READY: {head}")
+    if held:
+        print("HELD: " + " ".join(held))
+    if skipped:
+        print("SKIPPED: " + " ".join(skipped))
+    print(f"TOTAL: {counts['READY']} ready, {counts['CHECK']} to check, {counts['FAILED']} failed")
+    return 0
+
+
 COMMANDS = {
     "check": cmd_check,
     "summary": cmd_summary,
@@ -1483,6 +1642,7 @@ COMMANDS = {
     "move": cmd_move,
     "pass": cmd_pass,
     "find": cmd_find,
+    "triage": cmd_triage,
     "hook": cmd_hook,
 }
 

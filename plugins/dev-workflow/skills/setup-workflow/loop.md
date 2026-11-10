@@ -67,31 +67,34 @@ as `effort`.
 
 ## 2. Triage and decisions
 
-1. **Triage.** Spawn one `Plan` subagent (read-only, model `triage`), description
-   `Triage <kind>`, with this prompt, adding the skill's own triage cases and lists:
+1. **Triage.** Run `workflow-lists triage <lists> --skip <skipped ids>` (in section 6 with
+   `--only <ids>`). It prints `ORDER:` (the order of work: suggested order, what others build
+   on, severity, size; the user's findings first), then one line per item: `READY` (workable
+   as written), `FAILED` (has a `_Failed:_` stamp: a DECIDE item with the fixed question
+   below), `CHECK` (needs a look at the code, with the reason), and `HELD` / `SKIPPED` ids.
+   Only if there are `CHECK` items, spawn one `Plan` subagent (read-only, model `triage`),
+   description `Triage <kind>`, with this prompt, adding the skill's own triage cases:
 
    > Read part 1 of `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md` (up to
    > `# Part 2`), sections A and B of
-   > `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/work-item.md`, `CLAUDE.md`,
-   > `USER_WORKFLOW.md` and <lists>. Consider every open item <of the given ids> that is not
-   > tagged [HOLD] and not in `skip=<ids>`. For each, check it against the current code only
-   > as deeply as needed to classify it (<skill's triage depth>): READY (workable
-   > unattended, including items whose **Decisions:** cover their open questions), DECIDE
-   > (needs the user per section B, plus: <skill's cases>; every item with a `_Failed:_`
-   > stamp), or GONE (already done or obsolete). Don't plan READY items. For each DECIDE
-   > item, work out the approach and the concrete decisions the user must make. Answer only
-   > in this format:
+   > `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/work-item.md`, `CLAUDE.md`, and of
+   > `USER_WORKFLOW.md` only
+   > `workflow-lists section USER_WORKFLOW.md "Design docs" "Ask before" "Hands-off"`. Classify only these items, read with `workflow-lists show <ids>`:
+   > <the CHECK lines>. Check each against the current code only as deeply as needed to
+   > classify it (<skill's triage depth>): READY (workable unattended, including items whose
+   > **Decisions:** cover their open questions), DECIDE (needs the user per section B, plus:
+   > <skill's cases>), or GONE (already done or obsolete). Don't plan READY items. For each
+   > DECIDE item, work out the approach and the concrete decisions the user must make. Answer
+   > only in this format, one line per item:
    >
-   > `ORDER: <ids>` — every READY and DECIDE item, in the order to work them (the lists'
-   > suggested order, then items others build on, then severity, then smaller first)
-   > `READY: <id> | size <S/M/L/?> | model <the item's **Model:** line, or default>`
-   > `DECIDE: <id> | size | model | <title> — <the planned approach in one or two lines>`
+   > `READY: <id>`
+   > `DECIDE: <id> | <title> — <the planned approach in one or two lines>`
    > `  Q: <question> | <recommended option> | <option> [| <option>]` (one to three per item)
    > `GONE: <id> — <why>`
-   >
-   > For a `_Failed:_` item the only question is `How to continue with <id>?` with the options
-   > `Retry from scratch`, `Continue from the WIP branch`, `Put on hold`, `Drop it`
-   (`Continue from the WIP branch` only if the stamp names a branch).
+
+   For a `FAILED` item the only question is `How to continue with <id>?` with the options
+   `Retry from scratch`, `Continue from the WIP branch`, `Put on hold`, `Drop it`
+   (`Continue from the WIP branch` only if it names a branch); show its reason.
 
 2. **Ask.** If there are DECIDE items, show the user each one in two lines (id, title,
    approach), then ask their questions with `AskUserQuestion`, up to four questions per call,
@@ -110,11 +113,11 @@ as `effort`.
      they wrote their own>"`. For a `_Failed:_` item it moves the stamp (branch, model,
      reason) into the decision line.
 
-   Fix every `error` the commands print. Commit the list files you edited (by explicit path; type `chore`,
-   `chore: record run decisions for <ids>` or `chore: remove done items <ids>`, both parts
-   when both apply; no `Refs:` footer, scope per `list-format.md`).
-4. **Queue:** `ORDER` without skipped ids. Tell the user in one line how many items the run
-   will do and that it now runs unattended.
+   Fix every `error` the commands print. Commit the list files you edited (by explicit path;
+   type `chore`, `chore: record run decisions for <ids>` or `chore: remove done items <ids>`,
+   both parts when both apply; no `Refs:` footer, scope per `list-format.md`).
+4. **Queue:** `ORDER` without skipped, held, dropped and gone ids. Tell the user in one line
+   how many items the run will do and that it now runs unattended.
 
 ## 3. Each iteration
 

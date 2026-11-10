@@ -16,13 +16,11 @@ Follow `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/loop.md` exactly, with these
   design docs and its **Decisions:** don't say to go ahead; the item is too vague to build
   without guessing its behaviour (offer the concrete readings as options).
 - **Triage depth:** plan entries were already decided with the user by `/plan-features`, so
-  classify most from the entry alone. Look at the code only for an entry that gives cause: a
-  `_Failed:_` stamp, `[CONFLICT]`, an entry the user wrote or edited by hand (short, missing
-  required fields), a likely **Ask before** case, or one that may already be built (its
-  files changed since its `_Written:_` commit). The implementing agent checks the code
-  again anyway (`work-item.md` B).
-- **Order** for the triage: the suggested-order section if there is one, then items others
-  build on, then severity, then smaller first.
+  `workflow-lists triage` marks most `READY` from the entry alone, and the triage agent runs
+  only when it marks some `CHECK` (`[CONFLICT]`, an entry written or edited by hand, cited
+  files changed since it was written). For those, look at the code as far as the reason
+  needs. The implementing agent checks the code again anyway (`work-item.md` B), and blocks
+  an item that turns out to need the user.
 
 Arguments (all optional): a maximum number of items (`3`) and `skip=<ids>`.
 

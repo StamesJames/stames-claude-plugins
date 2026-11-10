@@ -16,11 +16,10 @@ Follow `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/loop.md` exactly, with these
   "possible", and findings asking about design intent. For a "verify" finding, offer
   `Investigate and fix if confirmed` (recommended); `Skip this run` (added by `loop.md`)
   covers skipping.
-- **Triage depth:** look at the cited code to see whether the problem is still there and the
-  fix is clear, no further. The user's short findings may cite nothing: then find the code
-  just far enough to classify them.
-- **Order** for the triage: the user's findings first (a `CLAUDE_ANALYSIS.md` item only goes
-  before them with a higher severity), each file by its section 4, then severity.
+- **Triage depth:** `workflow-lists triage` marks every finding `CHECK`: look at the cited
+  code to see whether the problem is still there and the fix is clear, no further. The
+  user's short findings may cite nothing: then find the code just far enough to classify
+  them.
 
 Arguments (all optional): a maximum number of fixes (`5`), `skip=<ids>`, and `user-only`: then
 only `USER_ANALYSIS.md` is worked off. Count and triage only its items, and pass `user-only`
