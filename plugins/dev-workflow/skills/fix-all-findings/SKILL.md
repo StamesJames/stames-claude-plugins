@@ -22,6 +22,6 @@ Follow `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/loop.md` exactly, with these
   them.
 
 Arguments (all optional): a maximum number of fixes (`5`), `skip=<ids>`, and `user-only`: then
-only `USER_ANALYSIS.md` is worked off. Count and triage only its items, and pass `user-only`
-to every subagent (skill extras `user-only`). `CLAUDE_ANALYSIS.md` stays out of the run; the
+only `USER_ANALYSIS.md` is worked off: `run start --user-only`, triage only that list, and
+pass `user-only` to every item agent (skill extras `user-only`). `CLAUDE_ANALYSIS.md` stays out of the run; the
 final report may say in one line how many items are open there.

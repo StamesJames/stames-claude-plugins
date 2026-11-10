@@ -136,11 +136,11 @@ defaults you chose, how you verified it and what you couldn't, side issues you n
 commit (with a scope suggestion if no scope fit), and how many items are still open plus which
 one would be next.
 
-**Unattended:** at most three plain lines (what changed, what couldn't be verified, side
-issues), then these lines:
+**Unattended:** at most three plain lines (what changed, side issues), then these lines:
 
 - `BLOCKED: <id> — <the decision needed>` for every item you skipped as needing the user.
 - `DEFAULTS: <id> — <the defaults you chose>` if you chose any.
+- `UNVERIFIED: <id> — <what you couldn't verify and how the user can check it>` if anything.
 - `SCOPE: …` from `list-format.md` if the commit has no scope.
 - As the very last line, exactly one of:
   - `RESULT: DONE <id> <short commit>`: entry deleted and committed.
