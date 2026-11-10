@@ -69,7 +69,10 @@ How to check a change; every fix and feature runs these.
    for p in plugins/*/; do grep -rhoE '\$\{CLAUDE_PLUGIN_ROOT\}/[A-Za-z0-9_./-]+' "$p" | sort -u | sed 's/[.]$//' | while read r; do f="$p${r#\$\{CLAUDE_PLUGIN_ROOT\}/}"; [ -e "$f" ] || echo "missing: $f"; done; done; grep -rhoE 'dev-workflow:[a-z-]+' plugins | sort -u | while read s; do [ -d "plugins/dev-workflow/skills/${s#dev-workflow:}" ] || echo "missing skill: $s"; done; echo done
    ```
 4. If `bin/workflow-lists`, the templates or the list rules changed, the smoke test against
-   fresh templates (prints `OK: no problems …`):
+   fresh templates (prints `OK: no problems …`); if the `run` commands changed, also drive
+   a mock run there (`WORKFLOW_LISTS_CLAUDE=<mock> workflow-lists run go features` after
+   `run start` / `run queue`, with a mock that commits and prints the result JSON) and
+   check the commits, `workflow/failed/*` branches, report and stats file:
    ```sh
    S=/tmp/claude-$(id -u)/wl-smoke; rm -rf $S; mkdir -p $S && cd $S && git init -q && T=<repo>/plugins/dev-workflow/skills/setup-workflow/templates && cp $T/{CLAUDE_ANALYSIS,USER_ANALYSIS,CLAUDE_PLAN,USER_IDEAS,CLAUDE_IDEAS,USER_WORKFLOW}.md . && cp $T/claude-md-section.md CLAUDE.md && python3 -I <repo>/plugins/dev-workflow/bin/workflow-lists check
    ```
@@ -88,24 +91,30 @@ root of the *target* project (not this repo): `CLAUDE_ANALYSIS.md`, `USER_ANALYS
 
 How the pieces fit:
 
-- **Three shared files in `skills/setup-workflow/`** hold the rules; skills read them instead
+- **Four shared files in `skills/setup-workflow/`** hold the rules; skills read them instead
   of repeating them, so change rules there:
   - `list-format.md`: list format and rules (ids, `_Next id:_`, stamps, `[HOLD]`, "done
     means deleted", Ideas as backlog, `Keep open for:`, `Decisions:` / `Model:` /
     `_Failed:_` lines, model rubric, `Refs:` footers, scope reporting). Part 1 (up to
-    `# Part 2`) holds what every list-touching skill needs and is all the single-item skills
-    and triage read; part 2 holds the files and entry formats. Keep that split.
-  - `work-item.md`: the steps for one item (sections A–H: modes, needs-the-user check,
-    build, self-review, verify, update list, commit, report and `RESULT:` lines). Its section
-    letters are referenced by `fix-next-finding` and `implement-next-feature`; keep them
-    stable or update those skills.
-  - `loop.md`: the run protocol (up-front triage and decisions, one subagent per item,
-    review subagent, after-run analysis). The mechanics (run state, queue, review decision,
-    WIP branches, escalation, failure stamps, report) are in `workflow-lists run`; `loop.md`
-    only says when to call it and what to do with its answer. Changing `work-item.md`'s
-    `RESULT:` / `BLOCKED:` / `DEFAULTS:` / `UNVERIFIED:` lines or arguments, or
-    `review-change` / `analyse-code` result lines, means updating `loop.md` and
-    `workflow-lists run result` too.
+    `# Part 2`) holds what the skills that write or triage entries need; part 2 holds the
+    files and entry formats. Keep that split.
+  - `item-rules.md`: the digest of part 1 an agent working on one item needs (binding
+    lines, `Verify:`, `Keep open for:`, `[HOLD]`, editing through the script, `Refs:`
+    footers). Printed by `workflow-lists brief`; single-item skills read no part of
+    `list-format.md`. A rule change in part 1 that concerns item agents goes here too.
+  - `work-item.md`: the steps for one item (sections A–H: modes and the `brief` context,
+    needs-the-user check, build, self-review, verify with the attempt budget, update list,
+    commit, report and `RESULT:` lines). Its section letters are referenced by
+    `fix-next-finding`, `implement-next-feature` and the driver's rework prompt (C–E, G);
+    keep them stable or update those.
+  - `loop.md`: the run protocol for the orchestrating session: up-front triage and
+    decisions, then `workflow-lists run go` in the background, and what to do with its exit
+    code. Everything unattended (one `claude -p` per item, booking, review and rework
+    rounds, WIP branches, escalation, failure stamps, after-run analysis with parallel part
+    agents, stats, report) is in the script. Changing `work-item.md`'s `RESULT:` /
+    `BLOCKED:` / `DEFAULTS:` / `UNVERIFIED:` / `NOTE:` lines or arguments, or
+    `review-change` (`ACCEPTED` / `REWORK` / `FAILED`) / `analyse-code` result lines, means
+    updating `workflow-lists run` (`apply_result`, the prompts in `run go`) too.
 - `skills/setup-workflow/templates/` holds the templates `/setup-workflow` copies into a target
   project (the five lists, `USER_WORKFLOW.md`, and `claude-md-section.md` for the target's
   `CLAUDE.md`). If a rule or section changes, check whether the templates and the "Check" mode
@@ -114,7 +123,10 @@ How the pieces fit:
   specific to their lists (picking order, needs-the-user cases, commit type); the rest is
   `work-item.md`. `user-only` restricts the fix skills to `USER_ANALYSIS.md`.
 - **Loop skills** (`fix-all-findings`, `implement-all-features`) are a few specifics on top of
-  `loop.md`. They never touch code.
+  `loop.md`. They never touch code. `review-change` is the acceptance gate of a run: it
+  re-runs the verification and the entry's `Verify:` steps, sends an unmet item back
+  (`REWORK`, up to `Rework rounds` from `## Runs`, the last round reviewed with `final`),
+  then tidies.
 - **Feature flow:** the user writes ideas (as vague as they like) in `USER_IDEAS.md`;
   `plan-features` asks the open questions and writes concrete features into `CLAUDE_PLAN.md`
   (an entry there is approved for building) and deletes the planned ideas; only
@@ -125,31 +137,40 @@ How the pieces fit:
   `plan-features claude:I<n>`. Ideas are never work.
 - `setup-workflow` section C migrates the pre-3.0 layout (`USER_PLAN.md`); `workflow-lists`
   flags that layout. Keep both if the list layout changes again.
-- `review-change` and `analyse-code since=<commit> after-run` are also run by the loops,
+- `review-change` and `analyse-code since=<commit> after-run` are also run by the driver,
   unattended. `analyse-code/part.md` holds the analysis checks and the read-only part-agent
-  protocol; large after-run analyses are split by `loop.md` itself (subagents can't spawn),
+  protocol; large after-run analyses are split by the driver into parallel part agents,
   with part findings written to `$(git rev-parse --git-path workflow-run)/analysis/`, next to
   the run log and state (`<kind>.log`, `<kind>.json`) that `workflow-lists run` keeps there.
-- **Token budget:** skills read only the parts of files they need (`workflow-lists show` /
-  `summary` / `find` / `section`, part 1 of `list-format.md`), use the `CLAUDE.md` already in
-  their context instead of reading it, and edit lists through the script instead of
-  Read/Edit. The headings these calls name are load-bearing: `USER_WORKFLOW.md` →
-  `Design docs`, `Code standards`, `Hands-off`, `Ask before`, `Commits`, `Analysis focus`,
-  `Runs`; `list-format.md` → `# Part 2`, `Commit footer`, `Scope reporting`,
-  `Analysis files`, `The plan`, `Idea files`, `Choosing a model`; `CLAUDE_IDEAS.md` →
-  `Dropped`. Renaming one means updating the calls.
-- **`bin/workflow-lists`** (Python 3, stdlib only) does everything mechanical about the lists:
-  reading (`check`, `summary`, `show`, `find`, `section`, `stamp`), editing (`add`, `delete`,
-  `set`, `move`, `pass`: ids, stamps, mentions, `_No open items._`, failed branches), the
-  run order and mechanical triage (`triage`) and the run state (`run …`). It parses
-  suggested-order steps (`1. **1.1** + **3.2**: why`) and `**Keep open for:**` lines in the
-  format `list-format.md` gives, and prints what it can't edit as `file:line`.
-  `hooks/hooks.json` runs `workflow-lists hook` after `Write`/`Edit` of a list file. When a
-  list rule, section name, entry field, template or `USER_WORKFLOW.md` → `## Runs` setting
-  changes, update the script too (it reads the `USER_WORKFLOW.md` template itself), then
-  run `workflow-lists check` against fresh templates in a scratch git repo: it must print
-  `OK`. A change to the editing or `run` commands is tested the same way: add entries, then
-  delete / set / run them in the scratch repo and check the files and the output.
+- **Token budget:** skills read only the parts of files they need (`workflow-lists brief` /
+  `show` / `summary` / `find` / `section`), use the `CLAUDE.md` already in their context
+  instead of reading it, and edit lists through the script instead of Read/Edit. The
+  headings these calls name are load-bearing: `USER_WORKFLOW.md` → `Design docs`,
+  `Code standards`, `Hands-off`, `Ask before`, `Commits`, `Analysis focus`, `Runs`;
+  `list-format.md` → `# Part 2`, `Commit footer`, `Scope reporting`, `Analysis files`,
+  `The plan`, `Idea files`, `Choosing a model`; `CLAUDE.md` → `## Workflow` with
+  `### Code scope` and `### Verification`; `CLAUDE_IDEAS.md` → `Dropped`. Renaming one means
+  updating the calls (`brief` reads the `USER_WORKFLOW.md` and `CLAUDE.md` ones).
+- **`bin/workflow-lists`** (Python 3, stdlib only) does everything mechanical about the lists
+  and runs: reading (`check`, `summary`, `show`, `find`, `section`, `brief`, `stamp`),
+  editing (`add`, `delete`, `set`, `move`, `pass`: ids, stamps, mentions,
+  `_No open items._`, failed branches), the run order and mechanical triage (`triage`), the
+  run state (`run start|queue|skip|log|next|result|commit|changes|end`), the **driver**
+  (`run go`: one `claude -p --output-format json` per item with model, effort,
+  `--max-turns` and `--max-budget-usd` from `## Runs`, `CLAUDECODE` unset so it runs from
+  inside a session; `--auto` prepares a run without the skill, queuing only `READY` items)
+  and the **stats** (`stats`; one JSON line per agent and run in the `Stats file`, with the
+  plugin version from `plugin.json`, model, size, turns, tokens by cache type, cost,
+  outcome). `WORKFLOW_LISTS_CLAUDE=<path>` substitutes the `claude` binary (a mock in
+  tests). It parses suggested-order steps (`1. **1.1** + **3.2**: why`) and
+  `**Keep open for:**` lines in the format `list-format.md` gives, and prints what it can't
+  edit as `file:line`. `hooks/hooks.json` runs `workflow-lists hook` after `Write`/`Edit` of
+  a list file. When a list rule, section name, entry field, template or `USER_WORKFLOW.md`
+  → `## Runs` setting changes, update the script too (it reads the `USER_WORKFLOW.md`
+  template itself), then run `workflow-lists check` against fresh templates in a scratch git
+  repo: it must print `OK`. A change to the editing or `run` commands is tested the same
+  way: add entries, then delete / set / drive them with a mock `claude` in the scratch repo
+  and check the files, branches and the output.
 
 Cross-skill references use `${CLAUDE_PLUGIN_ROOT}/skills/...` paths and the
 `dev-workflow:<skill>` skill names; keep both in sync when renaming or moving skills.
