@@ -8,6 +8,17 @@ Run from the target project (any directory inside its git repo):
   workflow-lists show ID...                        print the entries with these ids
   workflow-lists section FILE HEADING...           print these `## ` sections of FILE
   workflow-lists stamp                             value for _Found:_ / _Written:_ stamps
+  workflow-lists delete ID... [--to ID] [--dropped REASON]
+                                                   delete entries with their mentions and branches
+  workflow-lists set ID decisions TEXT | model SPEC|none | hold | unhold
+                        | failed BRANCH|none MODEL REASON | updated
+                                                   change one line of an entry
+  workflow-lists add FILE --title T [--section N] [--sev S] [--model M] [--before ID] < body
+                                                   add an entry with the next id and a stamp
+  workflow-lists move ID FILE [--note TEXT]        move an idea to the other idea file
+  workflow-lists pass FILE TEXT                    add a stamped line to the Passes list
+  workflow-lists find [--since COMMIT] [--show] [PATH...]
+                                                   analysis entries citing these files
   workflow-lists hook                              PostToolUse hook (reads hook JSON on stdin)
 
 The rules checked here are the mechanical part of
@@ -71,7 +82,7 @@ STAMP_RE = {
 }
 UPDATED_RE = re.compile(rf"^_Updated: {DATE} \({COMMIT}\)_$")
 FAILED_RE = re.compile(
-    rf"^_Failed: {DATE} \((?:`?(?P<branch>workflow/failed/[^`,\s]+)`?|no changes), [^)]+\): .+_$"
+    rf"^_Failed: {DATE} \((?:`?(?P<branch>workflow/failed/[^`,\s]+)`?|no changes), (?P<model>[^)]+)\): (?P<reason>.+)_$"
 )
 MODEL_RE = re.compile(r"^\*\*Model:\*\* `?[\w.:-]+`?(?:, reasoning (?P<effort>\w+))?\s*$")
 NEXT_ID_RE = re.compile(r"^_Next id: (?P<id>\S+?)_\s*$")
@@ -721,24 +732,18 @@ def cmd_show(args):
         return 2
     root = setup_root()
     lists = load(root)
-    by_ref = {}
-    for name, lf in lists.items():
-        raw = lf.raw.split("\n")
-        for s in lf.sections:
-            for i, it in enumerate(s.items):
-                end = s.items[i + 1].line - 1 if i + 1 < len(s.items) else (
-                    it.body[-1][0] if it.body else it.line)
-                by_ref.setdefault(it.ref, (name, it.line, raw[it.line - 1:end]))
+    refs = index(lists)
     missing = 0
     for ref in args:
-        hit = by_ref.get(ref)
+        hit = refs.get(ref)
         if not hit:
             print(f"not found: {ref} (no open entry with this id)")
             missing += 1
             continue
-        name, line, text = hit
-        print(f"==> {name}:{line}")
-        print("\n".join(trim(list(text))))
+        lf, it = hit
+        a, b = entry_span(lf, it)
+        print(f"==> {lf.name}:{it.line}")
+        print("\n".join(lf.raw.split("\n")[a:b]))
     return 1 if missing else 0
 
 
@@ -804,12 +809,679 @@ def cmd_hook(_args):
     return 2
 
 
+# --------------------------------------------------------------------------- editing
+
+FOOTER_KIND = {"CLAUDE_ANALYSIS.md": "analysis", "USER_ANALYSIS.md": "user analysis", "CLAUDE_PLAN.md": "plan"}
+# A suggested-order bullet: `- **1.1** + **3.2**: why` (also `1.`, `,`, `and`, `together with`).
+JOINER = r"\s*(?:\+|,|&|and|together with)\s*"
+ORDER_LINE_RE = re.compile(
+    rf"^(?P<lead>\s*(?:[-*]|\d+\.)\s+)(?P<refs>\*\*[^*\s]+\*\*(?:{JOINER}\*\*[^*\s]+\*\*)*)(?P<rest>.*)$"
+)
+BOLD_RE = re.compile(r"\*\*([^*\s]+)\*\*")
+KEEP_OPEN = "**Keep open for:**"
+
+
+def now_stamp(root):
+    """(date time TZ, short commit) for stamps written now."""
+    return time.strftime("%Y-%m-%d %H:%M %Z"), git(root, "rev-parse", "--short", "HEAD") or "no commit"
+
+
+def index(lists):
+    """ref as used outside the files -> (ListFile, Item)."""
+    refs = {}
+    for lf in lists.values():
+        for s in lf.sections:
+            for it in s.items:
+                refs.setdefault(it.ref, (lf, it))
+    return refs
+
+
+def entry_span(lf, it):
+    """0-based [start, end) of an entry's lines, without trailing blank and `---` lines."""
+    raw = lf.raw.split("\n")
+    end = len(raw)
+    for k in range(it.line, len(lf.lines)):
+        if lf.lines[k].startswith("## ") or HEADING_RE.match(lf.lines[k]):
+            end = k
+            break
+    start = it.line - 1
+    while end - 1 > start and raw[end - 1].strip() in ("", "---"):
+        end -= 1
+    return start, end
+
+
+def section_span(lf, section):
+    """0-based [start, end) of a section's body (after its heading, up to the next `## `)."""
+    start = section.line
+    end = next((k for k in range(start, len(lf.lines)) if lf.lines[k].startswith("## ")), len(lf.lines))
+    return start, end
+
+
+def save(lf, raw):
+    lf.path.write_text("\n".join(raw), encoding="utf-8")
+
+
+def collapse_blanks(raw, i):
+    """Leave at most one blank line where lines were removed at index i."""
+    while 0 < i < len(raw) and not raw[i - 1].strip() and not raw[i].strip():
+        del raw[i]
+
+
+def split_top(value):
+    """Split at commas outside parentheses and quotes."""
+    parts, cur, depth, quote = [], "", 0, None
+    for ch in value:
+        if quote:
+            quote = None if ch == quote else quote
+        elif ch in "\"“":
+            quote = '"' if ch == '"' else "”"
+        elif ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth = max(0, depth - 1)
+        elif ch == "," and depth == 0:
+            parts.append(cur.strip())
+            cur = ""
+            continue
+        cur += ch
+    if cur.strip():
+        parts.append(cur.strip())
+    return parts
+
+
+def wrap(text, width=95, indent=""):
+    import textwrap
+    return textwrap.wrap(text, width=width, subsequent_indent=indent,
+                         break_on_hyphens=False, break_long_words=False) or [text]
+
+
+def edit_order(lf, tokens, new=None):
+    """Remove (or replace by `new`) the bold ids in `tokens` from the suggested-order section.
+    Returns (changes, lines left for a manual edit)."""
+    order = lf.section(role="order")
+    if not order:
+        return [], []
+    raw = lf.raw.split("\n")
+    start, end = section_span(lf, order)
+    changes, left = [], []
+    k = start
+    while k < end:
+        line = raw[k]
+        if not lf.lines[k] or not any(t in line for t in tokens):
+            k += 1
+            continue
+        m = ORDER_LINE_RE.match(line)
+        refs = BOLD_RE.findall(m.group("refs")) if m else []
+        if not m or any(t in m.group("rest") for t in tokens):
+            left.append((k + 1, line.strip()))
+            k += 1
+            continue
+        refs = [new.strip("*") if f"**{r}**" in tokens else r for r in refs] if new else \
+            [r for r in refs if f"**{r}**" not in tokens]
+        if refs:
+            raw[k] = m.group("lead") + " + ".join(f"**{r}**" for r in refs) + m.group("rest")
+            changes.append(f"{lf.name}:{k + 1}: suggested order now `{raw[k].strip()[:70]}`")
+            k += 1
+            continue
+        j = k + 1
+        while j < end and raw[j].strip() and raw[j][0].isspace():
+            j += 1
+        del raw[k:j]
+        end -= j - k
+        changes.append(f"{lf.name}:{k + 1}: removed suggested-order step `{line.strip()[:70]}`")
+    # renumber a numbered list, and fall back to `_No open items._` when no id is left
+    n = 0
+    for k in range(start, end):
+        m = re.match(r"^(\d+)\.(\s.*)$", raw[k])
+        if m:
+            n += 1
+            raw[k] = f"{n}.{m.group(2)}"
+    body = [k for k in range(start, end) if raw[k].strip() not in ("", "---")]
+    if changes and not body:
+        raw[start:start] = ["", "_No open items._"]
+        changes.append(f"{lf.name}: suggested order is empty now")
+    elif body and not any(BOLD_RE.search(raw[k]) for k in body) and \
+            [raw[k].strip() for k in body] != ["_No open items._"]:
+        raw[body[0]:body[-1] + 1] = ["_No open items._"]
+        changes.append(f"{lf.name}: suggested order is empty now")
+    if changes:
+        save(lf, raw)
+    return changes, [(lf.name, n, t) for n, t in left]
+
+
+def edit_keep_open(lf, ref, new=None):
+    """Remove (or replace by `new`) `ref` in the file's **Keep open for:** lines."""
+    raw = lf.raw.split("\n")
+    masked = list(lf.lines)
+    pat = re.compile(rf"^{re.escape(ref)}(?![\w.])")
+    changes = []
+    k = 0
+    while k < len(raw):
+        if not masked[k].strip().startswith(KEEP_OPEN):
+            k += 1
+            continue
+        j = k + 1
+        while j < len(raw) and raw[j].strip() and not FIELD_RE.match(raw[j]) and not raw[j].startswith("#"):
+            j += 1
+        value = " ".join(t.strip() for t in raw[k:j])[len(KEEP_OPEN):].strip()
+        dot = value.endswith(".")
+        parts = split_top(value.rstrip("."))
+        if not any(pat.match(p) for p in parts):
+            k = j
+            continue
+        if new:
+            parts = [pat.sub(new, p) if pat.match(p) else p for p in parts]
+        else:
+            parts = [p for p in parts if not pat.match(p)]
+        if parts:
+            new_lines = wrap(f"{KEEP_OPEN} " + ", ".join(parts) + ("." if dot else ""))
+            raw[k:j] = new_lines
+            changes.append(f"{lf.name}:{k + 1}: **Keep open for:** now `{' '.join(new_lines)[:70]}`")
+            k += len(new_lines)
+        else:
+            del raw[k:j]
+            collapse_blanks(raw, k)
+            changes.append(f"{lf.name}:{k + 1}: removed the **Keep open for:** line (only named {ref})")
+        masked = masked_lines("\n".join(raw))
+    if changes:
+        save(lf, raw)
+    return changes
+
+
+def mention_patterns(lf, it):
+    """{file: regex} for mentions of the entry `it` (of list file `lf`) that may remain."""
+    i = re.escape(it.id or "")
+    if lf.kind == "analysis":
+        bare = rf"(?<![\w.]){i}(?!\w|\.\d)"
+        user = rf"(?<![\w.])U{i}(?!\w|\.\d)"
+        if lf.name == "CLAUDE_ANALYSIS.md":
+            return {"CLAUDE_ANALYSIS.md": re.compile(bare)}
+        return {"USER_ANALYSIS.md": re.compile(f"{bare}|{user}"), "CLAUDE_ANALYSIS.md": re.compile(user)}
+    if it.id is None:
+        return {}
+    pre = r"claude:" if lf.name == "CLAUDE_IDEAS.md" else r"(?<![\w:])"
+    rx = re.compile(rf"{pre}{i}\b")
+    return {n: rx for n in ("CLAUDE_PLAN.md", "USER_IDEAS.md", "CLAUDE_IDEAS.md")}
+
+
+def order_tokens(lf, it):
+    """{file: bold tokens} naming the entry in suggested-order sections."""
+    if lf.name == "CLAUDE_ANALYSIS.md":
+        return {lf.name: {f"**{it.id}**"}}
+    if lf.name == "USER_ANALYSIS.md":
+        return {lf.name: {f"**{it.id}**", f"**U{it.id}**"}, "CLAUDE_ANALYSIS.md": {f"**U{it.id}**"}}
+    if lf.name == "CLAUDE_IDEAS.md":
+        return {lf.name: {f"**{it.id}**", f"**claude:{it.id}**"}}
+    return {lf.name: {f"**{it.id}**"}}
+
+
+def leftover_mentions(lists, pats):
+    out = []
+    for name, rx in pats.items():
+        lf = lists[name]
+        if not lf.exists:
+            continue
+        skip = set(n for n, _ in lf.header)
+        dropped = lf.section(role="dropped")
+        if dropped:
+            a, b = section_span(lf, dropped)
+            skip |= set(range(a + 1, b + 1))
+        for n, line in enumerate(lf.lines, 1):
+            if n not in skip and rx.search(line):
+                out.append((name, n, line.strip()))
+    return out
+
+
+def report_check(root, files):
+    _, found = run_checks(root, sorted(files))
+    errors = [p for p in found if p["level"] == "error"]
+    for p in errors:
+        print(format_problem(p))
+    print(f"check: {plural(len(errors), 'error')} in {', '.join(sorted(files))}" if errors else
+          f"check: OK ({', '.join(sorted(files))})")
+    return 1 if errors else 0
+
+
+def take_opts(args, flags, bools=()):
+    """Split `--flag value` / `--bool` options from positional args."""
+    opts, pos, k = {}, [], 0
+    while k < len(args):
+        a = args[k]
+        if a in flags and k + 1 < len(args):
+            opts[a] = args[k + 1]
+            k += 2
+        elif a in bools:
+            opts[a] = True
+            k += 1
+        else:
+            pos.append(a)
+            k += 1
+    return opts, pos
+
+
+def delete_entry(root, ref, new=None, dropped=None):
+    """Delete one entry with its mentions. Returns (touched files, ok)."""
+    lists = load(root)
+    hit = index(lists).get(ref)
+    if not hit:
+        print(f"not found: {ref} (no open entry with this id)")
+        return set(), False
+    lf, it = hit
+    raw = lf.raw.split("\n")
+    a, b = entry_span(lf, it)
+    text = "\n".join(raw[a:b])
+    only = it.section.role == "items" and len(it.section.items) == 1
+    raw[a:b] = ["_No open items._"] if only else []
+    if not only:
+        collapse_blanks(raw, a)
+    save(lf, raw)
+    touched = {lf.name}
+    print(f"deleted {' '.join([ref, *(f'[{t}]' for t in it.tags), it.title])} ({lf.name}:{a + 1}-{b})")
+
+    tokens = order_tokens(lf, it)
+    pats = mention_patterns(lf, it)
+    left = []
+    for name, toks in tokens.items():
+        lists = load(root)
+        if lists[name].exists:
+            changes, rest = edit_order(lists[name], toks, new)
+            left += rest
+            if changes:
+                touched.add(name)
+                print("\n".join(changes))
+    if lf.kind != "analysis" and it.id:
+        for name in ("CLAUDE_PLAN.md", "USER_IDEAS.md", "CLAUDE_IDEAS.md"):
+            lists = load(root)
+            if lists[name].exists:
+                changes = edit_keep_open(lists[name], ref, new)
+                if changes:
+                    touched.add(name)
+                    print("\n".join(changes))
+    if dropped:
+        lists = load(root)
+        ideas = lists["CLAUDE_IDEAS.md"]
+        sec = ideas.section(role="dropped")
+        if lf.name != "CLAUDE_IDEAS.md" or not sec:
+            print("--dropped only applies to CLAUDE_IDEAS.md entries (with a `## Dropped` section)")
+        else:
+            raw = ideas.raw.split("\n")
+            s0, s1 = section_span(ideas, sec)
+            line = f"- {it.id} {it.title} — {dropped} ({time.strftime('%Y-%m-%d')})"
+            empty = [k for k in range(s0, s1) if raw[k].strip() == "_None yet._"]
+            items = [k for k in range(s0, s1) if raw[k].startswith("- ")]
+            if empty:
+                raw[empty[0]] = line
+            elif items:
+                raw.insert(items[-1] + 1, line)
+            else:
+                raw[s0:s0] = ["", line]
+            save(ideas, raw)
+            touched.add(ideas.name)
+            print(f"added to ## Dropped: {line}")
+    for br in sorted(set(BRANCH_RE.findall(text))):
+        if git(root, "branch", "-D", br) is not None:
+            print(f"deleted branch {br}")
+    lists = load(root)
+    for name, n, t in left + [m for m in leftover_mentions(lists, pats) if m[:2] not in {(x, y) for x, y, _ in left}]:
+        print(f"check this mention yourself: {name}:{n}: {t[:110]}")
+    if lf.name in FOOTER_KIND:
+        print(f"Refs: {FOOTER_KIND[lf.name]} {it.id} ({it.title})")
+    return touched, True
+
+
+def cmd_delete(args):
+    opts, refs = take_opts(args, {"--to", "--dropped"})
+    if not refs:
+        print("usage: workflow-lists delete ID... [--to NEW_ID] [--dropped REASON]")
+        return 2
+    root = setup_root()
+    touched, ok = set(), True
+    for ref in refs:
+        t, good = delete_entry(root, ref, opts.get("--to"), opts.get("--dropped"))
+        touched |= t
+        ok &= good
+    rc = report_check(root, touched) if touched else 0
+    return 1 if not ok or rc else 0
+
+
+def after_stamps(raw, a, b):
+    """Index right after the entry's stamp lines (_Found_/_Written_/_Updated_/_Failed_)."""
+    k = a + 1
+    while k < b and re.match(r"^_(Found|Written|Updated|Failed):", raw[k].strip()):
+        k += 1
+    return k
+
+
+def cmd_set(args):
+    if len(args) < 2:
+        print("usage: workflow-lists set ID decisions TEXT | model SPEC|none | hold | unhold | "
+              "failed BRANCH|none MODEL REASON | updated")
+        return 2
+    ref, what, rest = args[0], args[1], args[2:]
+    root = setup_root()
+    lists = load(root)
+    hit = index(lists).get(ref)
+    if not hit:
+        print(f"not found: {ref} (no open entry with this id)")
+        return 1
+    lf, it = hit
+    raw = lf.raw.split("\n")
+    a, b = entry_span(lf, it)
+    date_time, commit = now_stamp(root)
+    today = date_time[:10]
+    body = range(a + 1, b)
+
+    def find(prefix):
+        return [k for k in body if raw[k].strip().startswith(prefix)]
+
+    if what in ("hold", "unhold"):
+        tags = [t for t in it.tags if t != "HOLD"]
+        if what == "hold":
+            sev = 1 if tags and tags[0] in SEVERITIES else 0
+            tags.insert(sev, "HOLD")
+        head = " ".join(x for x in [it.id, *(f"[{t}]" for t in tags), it.title] if x)
+        raw[a] = f"### {head}"
+        msg = f"{ref}: heading now `{raw[a]}`"
+    elif what == "decisions":
+        if not rest:
+            print("set ID decisions TEXT: the text is missing")
+            return 2
+        text = " ".join(rest)
+        failed = [k for k in find("_Failed:") if FAILED_RE.match(raw[k].strip())]
+        for k in failed:
+            m = FAILED_RE.match(raw[k].strip())
+            where = f"`{m.group('branch')}`" if m.group("branch") else "(no changes)"
+            text += f"; earlier attempt on {where} ({m.group('model')}) failed: {m.group('reason')}"
+        old = find("**Decisions:**")
+        if old:
+            k = old[0]
+            j = k + 1
+            while j < b and raw[j].strip() and not FIELD_RE.match(raw[j]):
+                j += 1
+            joined = " ".join(t.strip() for t in raw[k:j])
+            raw[k:j] = wrap(f"{joined}; {text} ({today})")
+        else:
+            raw[b:b] = ["", *wrap(f"**Decisions:** {text} ({today})")]
+        for k in sorted(failed, reverse=True):
+            del raw[k]
+        msg = f"{ref}: decisions recorded" + (" (the _Failed:_ stamp moved into them)" if failed else "")
+    elif what == "model":
+        spec = " ".join(rest)
+        if not spec:
+            print("set ID model SPEC|none: the model is missing")
+            return 2
+        old = find("**Model:**")
+        line = f"**Model:** {spec}"
+        if spec == "none":
+            for k in reversed(old):
+                del raw[k]
+                collapse_blanks(raw, k)
+            msg = f"{ref}: model line removed"
+        else:
+            if not MODEL_RE.match(line):
+                print(f"bad model spec `{spec}`; expected `<model>[, reasoning <level>]`")
+                return 2
+            if old:
+                raw[old[0]] = line
+            else:
+                raw[b:b] = ["", line]
+            msg = f"{ref}: {line}"
+    elif what == "failed":
+        if len(rest) < 3:
+            print("set ID failed BRANCH|none MODEL REASON")
+            return 2
+        branch, model, reason = rest[0], rest[1], " ".join(rest[2:])
+        where = "no changes" if branch in ("none", "-") else f"`{branch}`"
+        line = f"_Failed: {date_time} ({where}, {model}): {reason}_"
+        raw.insert(after_stamps(raw, a, b), line)
+        msg = f"{ref}: {line}"
+    elif what == "updated":
+        line = f"_Updated: {date_time} (`{commit}`)_"
+        old = find("_Updated:")
+        if old:
+            raw[old[0]] = line
+        else:
+            raw.insert(after_stamps(raw, a, b), line)
+        msg = f"{ref}: {line}"
+    else:
+        print(f"unknown field `{what}`; use decisions, model, hold, unhold, failed or updated")
+        return 2
+    save(lf, raw)
+    print(msg)
+    return report_check(root, {lf.name})
+
+
+def items_section(lf, number=None):
+    if lf.kind == "analysis":
+        return lf.section(number=int(number)) if number else None
+    return lf.section(prefix="F" if lf.kind == "plan" else "I")
+
+
+def insert_entry(root, lf, section, entry, before=None):
+    """Insert entry lines (heading first) into section; returns the 1-based heading line."""
+    raw = lf.raw.split("\n")
+    s0, s1 = section_span(lf, section)
+    none = [k for k in range(s0, s1) if raw[k].strip() == "_No open items._"]
+    if none:
+        k = none[0]
+        raw[k:k + 1] = entry
+    elif before:
+        hit = index({lf.name: lf}).get(before)
+        if not hit or hit[1].section is not section:
+            print(f"--before {before}: not an entry of this section")
+            return None
+        k = hit[1].line - 1
+        raw[k:k] = entry + [""]
+    else:
+        k = s1
+        while k > s0 and raw[k - 1].strip() in ("", "---"):
+            k -= 1
+        raw[k:k] = [""] + entry
+        k += 1
+    save(lf, raw)
+    return k + 1
+
+
+def next_id(lf, section):
+    """Take the section's next id and count `_Next id:_` up. Returns the id or None."""
+    if not section.next_ids:
+        print(f"{lf.name}: section `{section.title}` has no `_Next id:_` line")
+        return None
+    n, val = section.next_ids[0]
+    m = re.fullmatch(re.escape(section.prefix) + r"(\d+)", val)
+    if not m:
+        print(f"{lf.name}:{n}: `_Next id: {val}_` doesn't look like `{section.prefix}<n>`")
+        return None
+    raw = lf.raw.split("\n")
+    raw[n - 1] = f"_Next id: {section.prefix}{int(m.group(1)) + 1}_"
+    save(lf, raw)
+    return val
+
+
+def build_entry(lf, item_id, sev, title, body, stamp_line):
+    head = " ".join(x for x in [item_id, f"[{sev}]" if sev else "", title] if x)
+    lines = [f"### {head}", stamp_line]
+    body = body.strip("\n")
+    if body:
+        lines += [""] + body.split("\n")
+    return lines
+
+
+def cmd_add(args):
+    opts, pos = take_opts(args, {"--section", "--sev", "--title", "--model", "--before"})
+    if len(pos) != 1 or "--title" not in opts:
+        print("usage: workflow-lists add FILE --title TITLE [--section 1|2|3] [--sev H|M|L] "
+              "[--model SPEC] [--before ID] < body")
+        return 2
+    name = pick_files(pos)[0]
+    root = setup_root()
+    lf = load(root)[name]
+    sev = opts.get("--sev", "").upper().strip("[]")
+    if sev and sev not in SEVERITIES:
+        print(f"--sev {sev}: use H, M or L")
+        return 2
+    if not sev and not lf.minimal:
+        print(f"{name} entries need a severity: --sev H|M|L")
+        return 2
+    section = items_section(lf, opts.get("--section"))
+    if section is None:
+        print("--section 1|2|3 is needed for an analysis file" if lf.kind == "analysis" else
+              f"{name} has no items section")
+        return 2
+    body = "" if sys.stdin.isatty() else sys.stdin.read()
+    if "--model" in opts:
+        line = f"**Model:** {opts['--model']}"
+        if not MODEL_RE.match(line):
+            print(f"bad model spec `{opts['--model']}`")
+            return 2
+        body = body.rstrip("\n") + "\n\n" + line
+    item_id = next_id(lf, section)
+    if item_id is None:
+        return 1
+    date_time, commit = now_stamp(root)
+    word = "Found" if lf.kind == "analysis" else "Written"
+    lf = load(root)[name]
+    section = items_section(lf, opts.get("--section"))
+    entry = build_entry(lf, item_id, sev, opts["--title"], body, f"_{word}: {date_time} (`{commit}`)_")
+    line = insert_entry(root, lf, section, entry, opts.get("--before"))
+    if line is None:
+        return 1
+    print(f"added {REF_PREFIX[name]}{item_id} at {name}:{line}")
+    return report_check(root, {name})
+
+
+def cmd_move(args):
+    opts, pos = take_opts(args, {"--note"})
+    if len(pos) != 2:
+        print("usage: workflow-lists move ID FILE [--note TEXT]   (e.g. move claude:I3 USER_IDEAS.md)")
+        return 2
+    ref, name = pos[0], pick_files(pos[1:])[0]
+    root = setup_root()
+    lists = load(root)
+    hit = index(lists).get(ref)
+    if not hit:
+        print(f"not found: {ref} (no open entry with this id)")
+        return 1
+    lf, it = hit
+    target = lists[name]
+    if target.kind != lf.kind or target.name == lf.name:
+        print(f"can only move between two files of the same kind ({lf.name} is `{lf.kind}`)")
+        return 2
+    raw = lf.raw.split("\n")
+    a, b = entry_span(lf, it)
+    body = [t for t in raw[a + 1:b] if not re.match(r"^_(Found|Written|Updated):", t.strip())]
+    if opts.get("--note"):
+        body += ["", *wrap(f"**Notes for Claude:** {opts['--note']}")]
+    section = items_section(target)
+    new_id = next_id(target, section)
+    if new_id is None:
+        return 1
+    new_ref = REF_PREFIX[name] + new_id
+    date_time, commit = now_stamp(root)
+    word = "Found" if target.kind == "analysis" else "Written"
+    target = load(root)[name]
+    entry = build_entry(target, new_id, it.severity, " ".join([*(f"[{t}]" for t in it.tags if t not in SEVERITIES), it.title]),
+                        "\n".join(body), f"_{word}: {date_time} (`{commit}`)_")
+    line = insert_entry(root, target, items_section(target), entry)
+    print(f"added {new_ref} at {name}:{line}")
+    touched, ok = delete_entry(root, ref, new=new_ref)
+    return report_check(root, touched | {name}) or (0 if ok else 1)
+
+
+def cmd_pass(args):
+    if len(args) < 2:
+        print("usage: workflow-lists pass FILE TEXT")
+        return 2
+    name = pick_files(args[:1])[0]
+    root = setup_root()
+    lf = load(root)[name]
+    raw = lf.raw.split("\n")
+    head = [n for n, t in lf.header if t.strip() == "Passes:"]
+    if not head:
+        print(f"{name}: the header has no `Passes:` list")
+        return 1
+    k = head[0]  # 0-based index right after `Passes:`
+    last = None
+    while k < len(raw) and (not raw[k].strip() or raw[k].startswith("- ")) and not raw[k].startswith("#"):
+        if raw[k].startswith("- "):
+            last = k
+        elif last is not None:
+            break
+        k += 1
+    date_time, commit = now_stamp(root)
+    line = f"- {date_time} at {commit}: {' '.join(args[1:])}"
+    if last is None:
+        raw[head[0]:head[0]] = ["", line]
+    else:
+        raw.insert(last + 1, line)
+    save(lf, raw)
+    print(f"{name}: {line}")
+    return report_check(root, {name})
+
+
+CITED_RE = re.compile(r"`([^`\s]+)`")
+
+
+def cited_paths(lf, it):
+    a, b = entry_span(lf, it)
+    out = set()
+    for t in lf.raw.split("\n")[a:b]:
+        for c in CITED_RE.findall(t):
+            c = re.sub(r":[\d,-]+$", "", c).rstrip("/")
+            if ("/" in c or "." in c) and not c.startswith(("workflow/", "**")) and not re.fullmatch(r"[0-9a-f]{4,40}", c):
+                out.add(c)
+    return out
+
+
+def cmd_find(args):
+    opts, paths = take_opts(args, {"--since"}, {"--show"})
+    root = setup_root()
+    if "--since" in opts:
+        out = git(root, "diff", "--name-only", f"{opts['--since']}..HEAD")
+        if out is None:
+            print(f"git diff {opts['--since']}..HEAD failed")
+            return 2
+        paths += [p for p in out.split("\n") if p and Path(p).name not in LISTS]
+    if not paths:
+        print("usage: workflow-lists find [--since COMMIT] [--show] [PATH...]")
+        return 2
+    lists = load(root)
+    hits, uncited = [], []
+    for name in ("CLAUDE_ANALYSIS.md", "USER_ANALYSIS.md"):
+        lf = lists[name]
+        for it in lf.items(ideas=False):
+            cited = cited_paths(lf, it)
+            if not cited:
+                uncited.append(it.ref)
+            elif any(p == c or p.endswith("/" + c) or p.startswith(c + "/") or c.startswith(p.rstrip("/") + "/")
+                     for p in paths for c in cited):
+                hits.append((lf, it))
+    n = len(hits)
+    print(f"{n} {'entry cites' if n == 1 else 'entries cite'} the {plural(len(set(paths)), 'path')}")
+    for lf, it in hits:
+        if "--show" in opts:
+            a, b = entry_span(lf, it)
+            print(f"==> {lf.name}:{it.line}")
+            print("\n".join(lf.raw.split("\n")[a:b]))
+        else:
+            print(f"{lf.name}:{describe(it).strip()}")
+    if uncited:
+        print(f"cite no file (judge by title, `show` if needed): {' '.join(uncited)}")
+    return 0
+
+
 COMMANDS = {
     "check": cmd_check,
     "summary": cmd_summary,
     "show": cmd_show,
     "section": cmd_section,
     "stamp": cmd_stamp,
+    "delete": cmd_delete,
+    "set": cmd_set,
+    "add": cmd_add,
+    "move": cmd_move,
+    "pass": cmd_pass,
+    "find": cmd_find,
     "hook": cmd_hook,
 }
 
