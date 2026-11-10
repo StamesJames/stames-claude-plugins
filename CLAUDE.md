@@ -90,9 +90,11 @@ How the pieces fit:
 
 - **Three shared files in `skills/setup-workflow/`** hold the rules; skills read them instead
   of repeating them, so change rules there:
-  - `list-format.md`: list format and rules (ids, `_Next id:_`, stamps, `[HOLD]`, "done means
-    deleted", Ideas as backlog, `Keep open for:`, `Decisions:` / `Model:` / `_Failed:_`
-    lines, model rubric, `Refs:` footers, scope reporting).
+  - `list-format.md`: list format and rules (ids, `_Next id:_`, stamps, `[HOLD]`, "done
+    means deleted", Ideas as backlog, `Keep open for:`, `Decisions:` / `Model:` /
+    `_Failed:_` lines, model rubric, `Refs:` footers, scope reporting). Part 1 (up to
+    `# Part 2`) holds what every list-touching skill needs and is all the single-item skills
+    and triage read; part 2 holds the files and entry formats. Keep that split.
   - `work-item.md`: the steps for one item (sections A–H: modes, needs-the-user check,
     build, self-review, verify, update list, commit, report and `RESULT:` lines). Its section
     letters are referenced by `fix-next-finding` and `implement-next-feature`; keep them
@@ -120,9 +122,20 @@ How the pieces fit:
   `plan-features claude:I<n>`. Ideas are never work.
 - `setup-workflow` section C migrates the pre-3.0 layout (`USER_PLAN.md`); `workflow-lists`
   flags that layout. Keep both if the list layout changes again.
-- `review-change` and `analyse-code since=<commit>` are also run by the loops, unattended.
+- `review-change` and `analyse-code since=<commit> after-run` are also run by the loops,
+  unattended. `analyse-code/part.md` holds the analysis checks and the read-only part-agent
+  protocol; large after-run analyses are split by `loop.md` itself (subagents can't spawn),
+  with part findings written to `$(git rev-parse --git-path workflow-run)/analysis/`, next to
+  the run log `loop.md` keeps there.
+- **Token budget:** skills read only the parts of files they need, via `workflow-lists show`
+  / `section` and part 1 of `list-format.md`. The headings these calls name are load-bearing:
+  `USER_WORKFLOW.md` → `Design docs`, `Code standards`, `Hands-off`, `Ask before`,
+  `Commits`, `Analysis focus`, `Runs`; `list-format.md` → `# Part 2`, `Commit footer`,
+  `Scope reporting`, `The plan`, `Choosing a model`. Renaming one means updating the calls.
 - **`bin/workflow-lists`** (Python 3, stdlib only) checks the mechanical part of
-  `list-format.md` (`check`), summarises open items (`summary`) and prints stamps (`stamp`);
+  `list-format.md` (`check`), summarises open items (`summary`), prints single entries
+  (`show <id>`) and file sections (`section <file> <heading>`, used to read only parts of
+  `USER_WORKFLOW.md` and `list-format.md`) and prints stamps (`stamp`);
   `hooks/hooks.json` runs `workflow-lists hook` after `Write`/`Edit` of a list file. When a
   list rule, section name, entry field, template or `USER_WORKFLOW.md` → `## Runs` setting
   changes, update the script too (it reads the `USER_WORKFLOW.md` template itself), then
