@@ -15,18 +15,26 @@ Arguments (all optional):
 - `full`: analyse the whole code scope.
 - `since=<commit>`: analyse what changed since that commit (used by the loops after a run).
 - a focus area (a subsystem, `save system`, `performance`): analyse only that, in full.
+- `after-run` (with `since=`, from the loops): the changes were already reviewed per item;
+  weight the checks as `part.md` describes for `after-run`.
+- `parts=<dir>` (from the loops): the scope was already read by part agents, whose findings
+  are the files in `<dir>`; merge those (step 3) instead of reading the scope yourself.
 - `unattended` (run in a subagent by a loop): never ask, end with the lines from step 6.
 
 Without `full`, `since=` or a focus, the pass is **incremental**: what changed since the
-commit of the last pass in the **Passes** list. If there was no pass yet, or that commit no
-longer exists (`git cat-file -e <commit>` fails, e.g. after a rebase), it is `full`.
+commit of the last pass in the **Passes** list. If that commit no longer exists
+(`git cat-file -e <commit>` fails, e.g. after a rebase or a squash merge), use the last
+commit before the day of that pass instead
+(`git rev-list -1 --before='<pass date> 00:00' HEAD`). Only if there was no pass yet, or no
+such commit exists, is the pass `full`; attended, say so in one line before starting (it may
+be large).
 
 ## 1. Gather context
 
 1. If `USER_WORKFLOW.md` is missing, the project isn't set up for this workflow: tell the user
    to run `/setup-workflow` and stop.
-2. Read `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md`: the list format and
-   rules.
+2. Read `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md` (the list format and
+   rules) and `${CLAUDE_PLUGIN_ROOT}/skills/analyse-code/part.md` (the checks).
 3. Run `workflow-lists stamp`. Every stamp written in this pass uses exactly this value
    (and the **Passes** line its date, time and commit).
 4. Read `CLAUDE.md` (its `## Workflow` section gives the code scope and verification),
@@ -38,10 +46,13 @@ longer exists (`git cat-file -e <commit>` fails, e.g. after a rebase), it is `fu
 
 ## 2. Decide what to read
 
+With `parts=`, skip this step: the parts are read.
+
 - **Incremental / `since=`:** `git diff --stat <base>..HEAD` and `git log --oneline
-  <base>..HEAD`. The scope is the changed files in the code scope, plus the code that directly
-  uses what changed (search for callers of changed functions, users of changed data) where
-  the change could break it. Existing findings in those files get re-checked; the others stay
+  <base>..HEAD`. The scope is the changed files in the code scope, plus direct users of what
+  changed (callers of changed functions, readers of changed data) where the change could
+  break them: at most about ten such files per change; if there are more, read a sample and
+  note it in the report. Existing findings in those files get re-checked; the others stay
   as they are. If nothing in the code scope changed, record an empty pass.
 - **Focus:** everything that belongs to the focus area.
 - **`full`:** the whole code scope from `CLAUDE.md`, plus the config and data files a finding
@@ -56,37 +67,22 @@ split, map the scope to the project's areas (the
 `general-purpose` subagent per part (model `analysis` from `## Runs`; omit for `inherit`),
 in parallel, with this prompt:
 
-> Read-only analysis; don't edit any file. Read `CLAUDE.md` and `USER_WORKFLOW.md` (analysis
-> focus, don't flag, code standards). Analyse <paths> for the checks below and return every
-> finding as: `SECTION <1|2|3> | <H|M|L> | <title>`, then `paths:` with lines, two to four
-> lines on what goes wrong (a concrete scenario) and why, `Fix:` the suggested change,
-> `Model:` per the rubric below, and `verify` if you could not confirm it. Then at most five
-> lines of `CROSS:` notes about things that involve other areas. Nothing else.
-> <the checks of step 3 and the model rubric from `list-format.md`, pasted in>
+> Read-only analysis; don't edit any file. Read
+> `${CLAUDE_PLUGIN_ROOT}/skills/analyse-code/part.md` and follow it as a part agent for
+> <paths> <`since <base>` for an incremental pass> <`after-run` if given>.
 
-When run unattended inside a subagent (which can't start agents), read the scope yourself.
+When run unattended inside a subagent (which can't start agents), read the scope yourself;
+the loops split large scopes themselves and pass `parts=`.
 
 ## 3. Analyse
 
-Read the code itself, not only excerpts. Look for:
+Apply the checks of `part.md` to the scope (with the `after-run` weighting if given), and
+verify before recording as it says.
 
-- **Bugs:** wrong behaviour, edge cases, persistence and load gaps, ordering of events or
-  initialisation, failures only in release/export/production builds, error handling.
-- **Performance:** work per frame/request/item that scales with data size, needless
-  allocations, blocking I/O on hot paths, event storms.
-- **Cleanliness/architecture:** violations of `## Code standards`, duplication, misplaced
-  responsibilities, fragile coupling (load-bearing names, implicit ordering), naming clashes,
-  speculative abstractions nothing uses, dead code or assets, stale comments, missing tests
-  for important behaviour, and a stale `CLAUDE.md`.
-- Everything listed under **Analysis focus** in `USER_WORKFLOW.md`, weighted as it says.
-
-With subagents, merge their findings: drop duplicates (of each other and of open entries),
-check each `CROSS:` note yourself, and spot-check the cited lines of every [H] finding.
-
-Verify before recording. Check claims against the code and, where it helps, run the
-verification from `CLAUDE.md` → `### Verification`. Mark anything you could not confirm as
-"verify" or "possible" rather than stating it as fact. Do not record what
-`USER_WORKFLOW.md` → **Don't flag** lists, nor conventions `CLAUDE.md` documents on purpose.
+With part findings (subagents, or the files of `parts=`): merge them, drop duplicates (of
+each other and of open entries), check each `CROSS:` note yourself, and spot-check the cited
+lines of every [H] finding. Existing findings in the files the parts covered get re-checked
+as in step 2.
 
 ## 4. Update `CLAUDE_ANALYSIS.md`
 
