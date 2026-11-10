@@ -28,10 +28,11 @@ new ones).
 ## 1. Context
 
 1. If `USER_WORKFLOW.md` is missing, tell the user to run `/setup-workflow` and stop.
-2. Read `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md`, `CLAUDE.md`,
-   `USER_WORKFLOW.md` (design docs, code standards, **Ask before**, `## Runs` for the default
-   `features` model), `USER_IDEAS.md` and `CLAUDE_PLAN.md` (features the new ones may build on
-   or duplicate). Of `CLAUDE_IDEAS.md`, read the named ideas and the `## Dropped` section.
+2. `CLAUDE.md` is already in your context (read the file only if it isn't). Read
+   `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md`, `USER_WORKFLOW.md` (design
+   docs, code standards, **Ask before**, `## Runs` for the default `features` model),
+   `USER_IDEAS.md` and `CLAUDE_PLAN.md` (features the new ones may build on or duplicate). Of
+   `CLAUDE_IDEAS.md`, read the named ideas and the `## Dropped` section.
 3. Run `workflow-lists stamp` for the stamps.
 4. No ideas to plan (none open, or all on hold): say so, suggest writing some into
    `USER_IDEAS.md` or `/pitch-feature` for one of Claude's, and stop.

@@ -17,9 +17,10 @@ have in mind in one plain sentence and wait.
 ## 1. Context
 
 1. If `USER_WORKFLOW.md` is missing, tell the user to run `/setup-workflow` and stop.
-2. Read `CLAUDE.md`, the design docs named in `USER_WORKFLOW.md` (the parts the idea touches),
-   `USER_IDEAS.md`, `CLAUDE_IDEAS.md` and `CLAUDE_PLAN.md`. Skim the code the idea would touch
-   (read-only), enough to talk about it concretely.
+2. Use `CLAUDE.md` (already in your context; read the file only if it isn't). Read the design
+   docs named in `USER_WORKFLOW.md` (the parts the idea touches), `USER_IDEAS.md`,
+   `CLAUDE_IDEAS.md` and `CLAUDE_PLAN.md`. Skim the code the idea would touch (read-only),
+   enough to talk about it concretely.
 3. If the idea is already done, or an entry in a list covers it, say so up front (with the id)
    and ask whether to build on that entry, still talk it through, or stop. Naming a
    `CLAUDE_IDEAS.md` idea as the starting point counts as approving it (step 3 hands on its

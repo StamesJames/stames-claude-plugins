@@ -9,10 +9,11 @@ names: the paths of its part, optionally a base commit (`since <commit>`), optio
 
 Read-only: edit no project file and no list file.
 
-1. Read `CLAUDE.md`, and of `USER_WORKFLOW.md` only `workflow-lists section USER_WORKFLOW.md
-   "Analysis focus" "Code standards" "Hands-off"`. For `Model:`, the rubric is
-   `workflow-lists section <this file's directory>/../setup-workflow/list-format.md
-   "Choosing a model"`.
+1. Use `CLAUDE.md` (already in your context; read the file only if it isn't). Of
+   `USER_WORKFLOW.md` read only
+   `workflow-lists section USER_WORKFLOW.md "Analysis focus" "Code standards" "Hands-off"`.
+   For `Model:`, the rubric is
+   `workflow-lists section <this file's directory>/../setup-workflow/list-format.md "Choosing a model"`.
 2. With a base commit: `git diff <base>..HEAD -- <paths>`; read the changed code and its
    surroundings, plus direct users of what changed where the change could break them (at
    most about ten files; if there are more, read a sample and say so in a `CROSS:` note).

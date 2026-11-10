@@ -21,7 +21,7 @@ keep them stable.
 this file is in, written out in commands):
 
 - part 1 of `R/list-format.md`: `sed '/^# Part 2/,$d' R/list-format.md`;
-- `CLAUDE.md`;
+- `CLAUDE.md`: already in your context; read the file only if it isn't;
 - of `USER_WORKFLOW.md` only `workflow-lists section USER_WORKFLOW.md "Design docs"
   "Code standards" "Hands-off" "Ask before" "Commits"`;
 - the item's entry: `workflow-lists show <id>` (it prints the file and line, for editing).

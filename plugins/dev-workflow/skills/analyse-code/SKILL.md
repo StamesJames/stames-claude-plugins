@@ -37,12 +37,13 @@ be large).
    rules) and `${CLAUDE_PLUGIN_ROOT}/skills/analyse-code/part.md` (the checks).
 3. Run `workflow-lists stamp`. Every stamp written in this pass uses exactly this value
    (and the **Passes** line its date, time and commit).
-4. Read `CLAUDE.md` (its `## Workflow` section gives the code scope and verification),
-   `USER_WORKFLOW.md` (analysis focus, things not to flag, code standards, hands-off paths,
-   `## Runs` for the default `fixes` model), the current `CLAUDE_ANALYSIS.md` and the user's
-   `USER_ANALYSIS.md`. Never edit `USER_ANALYSIS.md` in a pass and don't copy its items into
-   `CLAUDE_ANALYSIS.md`. If your analysis finds the cause of one of the user's items, or shows
-   one is already fixed, say so in the report instead.
+4. Use `CLAUDE.md` (already in your context; read the file only if it isn't); its `## Workflow`
+   section gives the code scope and verification. Read `USER_WORKFLOW.md` (analysis focus,
+   things not to flag, code standards, hands-off paths, `## Runs` for the default `fixes`
+   model), the current `CLAUDE_ANALYSIS.md` and the user's `USER_ANALYSIS.md`. Never edit
+   `USER_ANALYSIS.md` in a pass and don't copy its items into `CLAUDE_ANALYSIS.md`. If your
+   analysis finds the cause of one of the user's items, or shows one is already fixed, say so
+   in the report instead.
 
 ## 2. Decide what to read
 

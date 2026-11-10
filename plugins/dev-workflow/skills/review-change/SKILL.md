@@ -18,10 +18,11 @@ keep the answer short, end with the lines from step 5).
 1. If `USER_WORKFLOW.md` is missing, tell the user to run `/setup-workflow` and stop.
 2. `git status --short` must be clean; otherwise say so and stop (unattended:
    `RESULT: FAILED dirty tree`).
-3. Read `CLAUDE.md` (conventions, invariants, `### Verification`); of `USER_WORKFLOW.md`
-   only `workflow-lists section USER_WORKFLOW.md "Code standards" "Hands-off" "Commits"`; of
-   `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md` only
-   `workflow-lists section <that file> "Commit footer" "Scope reporting"`.
+3. Use `CLAUDE.md` (already in your context; read the file only if it isn't) for conventions,
+   invariants and `### Verification`. Of `USER_WORKFLOW.md` read only `workflow-lists section
+   USER_WORKFLOW.md "Code standards" "Hands-off" "Commits"`; of
+   `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md` only `workflow-lists section
+   <that file> "Commit footer" "Scope reporting"`.
 4. `git log --format='%h %s' <range>` and `git diff <range>`. The item's entry was deleted in
    the range: its text is in the diff of the list file (its **Done when:**, **Decisions:**
    and **Keep open for:** still apply).

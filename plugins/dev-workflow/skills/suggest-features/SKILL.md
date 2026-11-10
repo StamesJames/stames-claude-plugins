@@ -28,11 +28,12 @@ sources). Without one, look at the whole project.
    and the yardstick for every idea. Note what they plan that does not exist yet. If the
    project has no design docs, the intent comes from `CLAUDE.md`, the README and
    `USER_IDEAS.md`; say so in the report.
-5. Read `CLAUDE.md`, the current `CLAUDE_IDEAS.md`, `USER_IDEAS.md` and `CLAUDE_PLAN.md`, so
-   you don't duplicate anything already listed. The **Dropped** section of `CLAUDE_IDEAS.md`
-   lists ideas the user turned down: don't suggest them again, not even reworded. Only bring
-   one back if the project changed so much that the user's reason no longer applies, and then
-   say so in the idea and in the report.
+5. Use `CLAUDE.md` (already in your context; read the file only if it isn't). Read the current
+   `CLAUDE_IDEAS.md`, `USER_IDEAS.md` and `CLAUDE_PLAN.md`, so you don't duplicate anything
+   already listed. The **Dropped** section of `CLAUDE_IDEAS.md` lists ideas the user turned
+   down: don't suggest them again, not even reworded. Only bring one back if the project
+   changed so much that the user's reason no longer applies, and then say so in the idea and in
+   the report.
 6. Look at the project as it is now: its main systems, data and UI. Ideas have to fit the code
    that exists and say how they would plug into it. If a tool to run and look at the product
    is available (see `CLAUDE.md` → `### Verification`), using it can help judge the feel; it's
