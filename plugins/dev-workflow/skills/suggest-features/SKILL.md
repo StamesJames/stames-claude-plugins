@@ -20,15 +20,18 @@ sources). Without one, look at the whole project.
 ## 1. Gather context
 
 1. If `USER_WORKFLOW.md` is missing, tell the user to run `/setup-workflow` and stop.
-2. Read `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md`.
+2. Read part 1 of `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md`
+   (`sed '/^# Part 2/,$d' <file>`) and of part 2
+   `workflow-lists section <that file> "Idea files"`.
 3. Read `USER_WORKFLOW.md`: the **Design docs** (and whether conflicting ideas are allowed)
    and the **Idea sources**. Then read **all the design docs** it names. They are the intent,
    and the yardstick for every idea. Note what they plan that does not exist yet. If the
    project has no design docs, the intent comes from `CLAUDE.md`, the README and
    `USER_IDEAS.md`; say so in the report.
 4. Use `CLAUDE.md` (already in your context; read the file only if it isn't). Read the current
-   `CLAUDE_IDEAS.md`, `USER_IDEAS.md` and `CLAUDE_PLAN.md`, so you don't duplicate anything
-   already listed. The **Dropped** section of `CLAUDE_IDEAS.md` lists ideas the user turned
+   `CLAUDE_IDEAS.md` (its ideas get re-checked) and the titles in
+   `workflow-lists summary --ideas USER_IDEAS.md CLAUDE_PLAN.md` (`show` an entry if a title
+   is close), so you don't duplicate anything already listed. The **Dropped** section of `CLAUDE_IDEAS.md` lists ideas the user turned
    down: don't suggest them again, not even reworded. Only bring one back if the project
    changed so much that the user's reason no longer applies, and then say so in the idea and in
    the report.

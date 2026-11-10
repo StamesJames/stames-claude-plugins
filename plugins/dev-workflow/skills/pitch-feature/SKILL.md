@@ -17,10 +17,13 @@ Optional argument: an idea id (`I3` or `claude:I3`) to pitch that one, or a focu
 ## 1. Check for open ideas
 
 1. If `USER_WORKFLOW.md` is missing, tell the user to run `/setup-workflow` and stop.
-2. `CLAUDE.md` is already in your context (read the file only if it isn't). Read
-   `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md`, `USER_WORKFLOW.md` and
-   `CLAUDE_IDEAS.md`. If it holds no open ideas, say so, suggest `/suggest-features`, and stop.
-3. Read the design-doc sections the candidates name, `USER_IDEAS.md`, `CLAUDE_PLAN.md` and
+2. `CLAUDE.md` is already in your context (read the file only if it isn't). Read part 1 of
+   `${CLAUDE_PLUGIN_ROOT}/skills/setup-workflow/list-format.md` (`sed '/^# Part 2/,$d'
+   <file>`), `USER_WORKFLOW.md` and `CLAUDE_IDEAS.md`. If it holds no open ideas, say so,
+   suggest `/suggest-features`, and stop.
+3. Read the design-doc sections the candidates name,
+   `workflow-lists summary --ideas USER_IDEAS.md CLAUDE_PLAN.md` (`show` the entries that may
+   overlap a candidate) and
    `git log --oneline -15`, so you know the intent and what the user is working on right now.
 
 ## 2. Pick the best idea for *now*
