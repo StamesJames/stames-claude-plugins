@@ -5,12 +5,15 @@ Run from the target project (any directory inside its git repo):
 
   workflow-lists check [--errors-only] [FILE...]   validate lists, CLAUDE.md, USER_WORKFLOW.md
   workflow-lists summary [--ideas] [FILE...]       one line per open item
+  workflow-lists show ID...                        print the entries with these ids
+  workflow-lists section FILE HEADING...           print these `## ` sections of FILE
   workflow-lists stamp                             value for _Found:_ / _Written:_ stamps
   workflow-lists hook                              PostToolUse hook (reads hook JSON on stdin)
 
 The rules checked here are the mechanical part of
 skills/setup-workflow/list-format.md; keep both in sync.
-Exit codes: 0 fine (warnings allowed), 1 errors found, 2 not set up or bad usage.
+Exit codes: 0 fine (warnings allowed), 1 errors found (show / section: an id or
+heading not found), 2 not set up or bad usage.
 Standard library only.
 """
 
@@ -705,6 +708,67 @@ def cmd_summary(args):
     return 0
 
 
+def trim(lines):
+    """Drop trailing blank lines and `---` separators."""
+    while lines and lines[-1].strip() in ("", "---"):
+        lines.pop()
+    return lines
+
+
+def cmd_show(args):
+    if not args:
+        print("usage: workflow-lists show ID...")
+        return 2
+    root = setup_root()
+    lists = load(root)
+    by_ref = {}
+    for name, lf in lists.items():
+        raw = lf.raw.split("\n")
+        for s in lf.sections:
+            for i, it in enumerate(s.items):
+                end = s.items[i + 1].line - 1 if i + 1 < len(s.items) else (
+                    it.body[-1][0] if it.body else it.line)
+                by_ref.setdefault(it.ref, (name, it.line, raw[it.line - 1:end]))
+    missing = 0
+    for ref in args:
+        hit = by_ref.get(ref)
+        if not hit:
+            print(f"not found: {ref} (no open entry with this id)")
+            missing += 1
+            continue
+        name, line, text = hit
+        print(f"==> {name}:{line}")
+        print("\n".join(trim(list(text))))
+    return 1 if missing else 0
+
+
+def cmd_section(args):
+    if len(args) < 2:
+        print("usage: workflow-lists section FILE HEADING...")
+        return 2
+    path = Path(args[0])
+    if not path.is_absolute():
+        path = find_root(Path.cwd()) / path
+    if not path.is_file():
+        print(f"missing: {path}")
+        return 2
+    raw = path.read_text(encoding="utf-8").split("\n")
+    masked = masked_lines("\n".join(raw))
+    starts = [n for n, line in enumerate(masked) if re.match(r"^#{1,2} ", line)] + [len(raw)]
+    missing = 0
+    for want in args[1:]:
+        want_low = want.lower().lstrip("# ").strip()
+        hit = next((i for i, n in enumerate(starts[:-1])
+                    if masked[n].startswith("## ") and masked[n][3:].strip().lower().startswith(want_low)), None)
+        if hit is None:
+            print(f"not found: ## {want}")
+            missing += 1
+            continue
+        print("\n".join(trim(raw[starts[hit]:starts[hit + 1]])))
+        print()
+    return 1 if missing else 0
+
+
 def cmd_stamp(_args):
     root = find_root(Path.cwd())
     commit = git(root, "rev-parse", "--short", "HEAD") or "no commit"
@@ -740,7 +804,14 @@ def cmd_hook(_args):
     return 2
 
 
-COMMANDS = {"check": cmd_check, "summary": cmd_summary, "stamp": cmd_stamp, "hook": cmd_hook}
+COMMANDS = {
+    "check": cmd_check,
+    "summary": cmd_summary,
+    "show": cmd_show,
+    "section": cmd_section,
+    "stamp": cmd_stamp,
+    "hook": cmd_hook,
+}
 
 
 def main(argv):
