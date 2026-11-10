@@ -16,8 +16,8 @@ there (Read with `offset`), not whole.
 not substituted and is not set in Bash. Before sending a prompt, replace it with the plugin
 root (the directory two levels above this file, which holds `skills/`).
 
-All questions come **before** the long unattended part (step 2). After that the run doesn't
-need the user, apart from the rare item that turns out to need a decision mid-run (step 6).
+All questions come **before** the long unattended part (section 2). After that the run doesn't
+need the user, apart from the rare item that turns out to need a decision mid-run (section 6).
 All state that matters is written to the list files and the run log, so an interrupted run
 can simply be started again.
 
@@ -45,8 +45,8 @@ there. If the log can't be written, keep the same lines in mind instead.
    - stop after 3 consecutive failures;
    - run branch: no.
 4. **Log.** If `<log>` exists and its last line isn't `end`, a run was interrupted: say so
-   in one line, take its `start` commit and `skip` ids over, and append to it (skip step 6's
-   `start` line). Otherwise remove any old log and start a new one.
+   in one line, take its `start` commit and `skip` ids over, and append to it (skip the `start`
+   line of step 1.6). Otherwise remove any old log and start a new one.
 5. Count the open items with `workflow-lists summary <lists>` (don't read the lists for
    this): its `TOTAL:` line gives open and held items, its item lines the ids and line
    numbers. None open besides held ones: say so and stop. Run `workflow-lists check <lists>`
@@ -137,17 +137,17 @@ as `effort`.
    the same files). Don't poll and don't predict its result.
 4. Log its `BLOCKED:`, `DEFAULTS:`, `SCOPE:` and `RESULT:` lines, and what it says it
    couldn't verify as `unverified <id> — …`. Then:
-   - `DONE <id> <commit>`: reset `consecutive_failures`, run the review (step 4). Give the
+   - `DONE <id> <commit>`: reset `consecutive_failures`, run the review (section 4). Give the
      user one line (`✓ F2 Pause menu sound`) plus the defaults chosen.
    - `PARTIAL <id> <commit>`: as `DONE`; put the id at the end of `queue` once. A second
      `PARTIAL` for the same id: log `skip <id>`.
    - `BLOCKED <id>`: nothing more (the logged `BLOCKED:` line holds the reason).
    - `NOTHING_LEFT`: the item was gone; carry on.
-   - `FAILED <id>`, or no `RESULT:` line: step 5.
+   - `FAILED <id>`, or no `RESULT:` line: section 5 (failures; the run goes on).
 5. Except after a failure, `git status --short` must be clean. If it isn't, stop and report
    what is left.
 6. Stop when the maximum number of items from the argument is reached. When `queue` is empty,
-   go to step 6.
+   go to section 6.
 
 ## 4. Review
 
@@ -161,7 +161,7 @@ If it does, spawn a `general-purpose` subagent (model `review`), description `Re
 > follow it exactly), and end with the lines that skill defines.
 
 Log its `SCOPE:` and `RESULT:` lines as `review <id> …`. `RESULT: FAILED` doesn't stop the
-run (the reviewer undid its own edits). The tree must be clean afterwards, as in step 3.5.
+run (the reviewer undid its own edits). The tree must be clean afterwards, as in section 3, step 5.
 
 ## 5. Failures
 
@@ -180,11 +180,11 @@ A failure never stops the run on its own; the attempt is saved and the run moves
    `--no-verify` only here: the attempt is broken by definition, and hooks would refuse to
    save it. The tree was clean before the item, so everything in it belongs to the attempt.
 2. **Escalate once.** If `## Runs` names an escalation model, the item's model differs from
-   it and the item wasn't escalated yet: run step 3 again for this id with that model,
+   it and the item wasn't escalated yet: run section 3, steps 2–4 again for this id with that model,
    appending to the prompt: "An earlier attempt with <model> failed: <reason>. Its changes
    are on branch `<branch>` (`git diff <run branch>...<branch>`); use them if helpful, but
    start from the current code." (If step 1 saved nothing, leave out the branch sentence.)
-   If that succeeds, delete the saved branch (`git branch -D`) and continue as for `DONE`. If it fails, save that attempt as well (1).
+   If that succeeds, delete the saved branch (`git branch -D`) and continue as for `DONE`. If it fails, save that attempt as well (step 1).
 3. **Record the failure.** Add the `_Failed:_` stamp from `list-format.md` to the entry
    (naming the last saved branch, or `no changes` if none was saved, the model and the
    reason; time from `workflow-lists stamp`) and commit the list file
@@ -195,8 +195,8 @@ A failure never stops the run on its own; the attempt is saved and the run moves
 ## 6. Items blocked during the run
 
 If items were blocked during the run (`BLOCKED:` lines in the log) when `queue` runs out: run
-step 2 again for just those ids (triage, ask, record), queue the decided ones and continue
-with step 3. Do this once per item; an item blocked again after the user decided stays open
+section 2 again for just those ids (triage, ask, record), queue the decided ones and continue
+with section 3. Do this once per item; an item blocked again after the user decided stays open
 and goes into the report.
 
 ## 7. After the run
