@@ -1,6 +1,6 @@
 ---
 name: fix-all-findings
-description: Work off CLAUDE_ANALYSIS.md and USER_ANALYSIS.md completely (with `user-only`, only USER_ANALYSIS.md): ask all needed decisions up front, then fix one finding per fresh subagent, unattended, with review and failure handling, until nothing fixable is left. Use when the user asks to fix all findings, work off the analysis list(s), or loop /fix-next-finding. Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
+description: Work off CLAUDE_ANALYSIS.md and USER_ANALYSIS.md completely (with `user-only`, only USER_ANALYSIS.md): ask all needed decisions up front, then fix one finding per fresh subagent, unattended, with review and failure handling, until nothing fixable is left. Use when the user asks to fix all findings, work off the analysis list(s), or loop /fix-next-finding.
 ---
 
 # Fix all analysis findings

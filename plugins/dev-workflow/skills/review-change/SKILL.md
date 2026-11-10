@@ -1,6 +1,6 @@
 ---
 name: review-change
-description: Review a range of commits (by default the last commit) with a fresh eye for clean code against the project's code standards (reuse, simplicity, naming, structure, tests), apply the clear improvements without changing behaviour, verify and commit them as a follow-up. Used by the workflow loops after each larger item; use it directly when the user asks to review or tidy up a recent commit or change. Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
+description: Review a range of commits (by default the last commit) with a fresh eye for clean code against the project's code standards (reuse, simplicity, naming, structure, tests), apply the clear improvements without changing behaviour, verify and commit them as a follow-up. Used by the workflow loops after each larger item; use it directly when the user asks to review or tidy up a recent commit or change.
 ---
 
 # Review and tidy a change

@@ -1,6 +1,6 @@
 ---
 name: implement-all-features
-description: Work off the concrete features in CLAUDE_PLAN.md completely (never ideas): ask all needed decisions up front, then implement one feature per fresh subagent, unattended, with review, failure handling and a closing analysis of the changes. Use when the user asks to implement all of the plan, work off CLAUDE_PLAN.md, or loop /implement-next-feature. Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
+description: Work off the concrete features in CLAUDE_PLAN.md completely (never ideas): ask all needed decisions up front, then implement one feature per fresh subagent, unattended, with review, failure handling and a closing analysis of the changes. Use when the user asks to implement all of the plan, work off CLAUDE_PLAN.md, or loop /implement-next-feature.
 ---
 
 # Implement all planned features

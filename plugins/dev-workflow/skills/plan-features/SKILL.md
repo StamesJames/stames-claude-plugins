@@ -1,6 +1,6 @@
 ---
 name: plan-features
-description: Turn the user's feature ideas from USER_IDEAS.md (all open ones, given ids, a free-text wish, or an approved claude:I idea) into concrete, buildable features in CLAUDE_PLAN.md - explore the code, ask the user the open questions up front, write the features with their decisions, delete the planned ideas and commit. Also sharpens an existing CLAUDE_PLAN.md feature (F3). Use when the user asks to plan their ideas, plan or spec out a feature, turn ideas into features, or prepare the plan for /implement-all-features. Never changes project code. Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
+description: Turn the user's feature ideas from USER_IDEAS.md (all open ones, given ids, a free-text wish, or an approved claude:I idea) into concrete, buildable features in CLAUDE_PLAN.md - explore the code, ask the user the open questions up front, write the features with their decisions, delete the planned ideas and commit. Also sharpens an existing CLAUDE_PLAN.md feature (F3). Use when the user asks to plan their ideas, plan or spec out a feature, turn ideas into features, or prepare the plan for /implement-all-features. Never changes project code.
 ---
 
 # Plan features from ideas

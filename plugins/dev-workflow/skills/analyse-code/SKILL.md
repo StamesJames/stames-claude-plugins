@@ -1,6 +1,6 @@
 ---
 name: analyse-code
-description: Run a cleanup analysis pass looking for bugs, unclean code and performance problems, and record the findings in CLAUDE_ANALYSIS.md, then commit that file. By default only what changed since the last pass; `full` analyses the whole project (split across one subagent per area when it is large). Use when the user asks for a code analysis, cleanup round, audit or review of the project (not of a single diff). Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
+description: Run a cleanup analysis pass looking for bugs, unclean code and performance problems, and record the findings in CLAUDE_ANALYSIS.md, then commit that file. By default only what changed since the last pass; `full` analyses the whole project (split across one subagent per area when it is large). Use when the user asks for a code analysis, cleanup round, audit or review of the project (not of a single diff).
 ---
 
 # Code analysis pass

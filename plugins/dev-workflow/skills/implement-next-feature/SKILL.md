@@ -1,6 +1,6 @@
 ---
 name: implement-next-feature
-description: Implement one concrete feature from CLAUDE_PLAN.md (the best next one, or a given id), verify it, delete its entry and commit. Never ideas (USER_IDEAS.md, CLAUDE_IDEAS.md). Use when the user asks to implement the next feature from the plan or names a CLAUDE_PLAN.md feature to build. Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
+description: Implement one concrete feature from CLAUDE_PLAN.md (the best next one, or a given id), verify it, delete its entry and commit. Never ideas (USER_IDEAS.md, CLAUDE_IDEAS.md). Use when the user asks to implement the next feature from the plan or names a CLAUDE_PLAN.md feature to build.
 ---
 
 # Implement the next planned feature

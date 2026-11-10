@@ -1,6 +1,6 @@
 ---
 name: brainstorm-feature
-description: Talk through a rough feature idea of the user's own (given as the argument) in a loose conversation - what they want, why, alternatives, what the code allows - and once it is clear, plan it straight into CLAUDE_PLAN.md with /plan-features, without going through USER_IDEAS.md (or park it there). Never changes project code. Use when the user wants to brainstorm, discuss, think through or talk about an idea of their own before it is planned. Not for Claude's own ideas (/suggest-features, /pitch-feature). Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
+description: Talk through a rough feature idea of the user's own (given as the argument) in a loose conversation - what they want, why, alternatives, what the code allows - and once it is clear, plan it straight into CLAUDE_PLAN.md with /plan-features, without going through USER_IDEAS.md (or park it there). Never changes project code. Use when the user wants to brainstorm, discuss, think through or talk about an idea of their own before it is planned. Not for Claude's own ideas (/suggest-features, /pitch-feature).
 ---
 
 # Brainstorm one idea, then plan it

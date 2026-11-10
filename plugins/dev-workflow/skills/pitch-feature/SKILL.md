@@ -1,6 +1,6 @@
 ---
 name: pitch-feature
-description: Pick the single idea from CLAUDE_IDEAS.md (Claude's own suggestions) that would be best right now, explain what it is and how it benefits the project, and on the user's answer add it to USER_IDEAS.md, plan it right away with /plan-features, or drop it. Never changes project code. Use when the user asks what Claude would build next, or for a feature pitch or recommendation from Claude's ideas. Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
+description: Pick the single idea from CLAUDE_IDEAS.md (Claude's own suggestions) that would be best right now, explain what it is and how it benefits the project, and on the user's answer add it to USER_IDEAS.md, plan it right away with /plan-features, or drop it. Never changes project code. Use when the user asks what Claude would build next, or for a feature pitch or recommendation from Claude's ideas.
 ---
 
 # Pitch one of Claude's ideas

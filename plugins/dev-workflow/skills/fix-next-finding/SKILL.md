@@ -1,6 +1,6 @@
 ---
 name: fix-next-finding
-description: Fix one finding from CLAUDE_ANALYSIS.md / USER_ANALYSIS.md (the best next one, or a given id), verify it, delete its entry and commit. With `user-only`, only USER_ANALYSIS.md. Use when the user asks to fix the next finding, bug or cleanup item, or names a finding to fix. Needs a project set up with /setup-workflow (USER_WORKFLOW.md).
+description: Fix one finding from CLAUDE_ANALYSIS.md / USER_ANALYSIS.md (the best next one, or a given id), verify it, delete its entry and commit. With `user-only`, only USER_ANALYSIS.md. Use when the user asks to fix the next finding, bug or cleanup item, or names a finding to fix.
 ---
 
 # Fix the next analysis finding
