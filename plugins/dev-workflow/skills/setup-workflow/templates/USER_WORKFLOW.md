@@ -100,6 +100,9 @@ decisions, `workflow-lists run go` builds the queue unattended: one fresh headle
 - Rework rounds: 1 <!-- how often a review may send an item back before it is accepted
   as it is (with notes); 0 to turn off -->
 - Analyse after run: features yes, fixes no
+- Full verification after run: features yes, fixes yes <!-- once at the end of a run, one agent
+  runs the **Full** tier of `### Verification` (skipped without commits or a Full tier); a
+  failure becomes an [H] finding in `CLAUDE_ANALYSIS.md`, nothing is reverted -->
 - Stop after consecutive failures: 3
 - Run branch: no <!-- yes: a run started on the default branch commits to
   `workflow/<date>-<kind>` instead. Failed attempts always go to `workflow/failed/<item>`. -->

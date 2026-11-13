@@ -110,8 +110,8 @@ How the pieces fit:
   - `loop.md`: the run protocol for the orchestrating session: up-front triage and
     decisions, then `workflow-lists run go` in the background, and what to do with its exit
     code. Everything unattended (one `claude -p` per item, booking, review and rework
-    rounds, WIP branches, escalation, failure stamps, after-run analysis with parallel part
-    agents, stats, report) is in the script. Changing `work-item.md`'s `RESULT:` /
+    rounds, WIP branches, escalation, failure stamps, the once-per-run full verification,
+    after-run analysis with parallel part agents, stats, report) is in the script. Changing `work-item.md`'s `RESULT:` /
     `BLOCKED:` / `DEFAULTS:` / `UNVERIFIED:` / `CHECKS:` / `NOTE:` lines or arguments, or
     `review-change` (`ACCEPTED` / `REWORK` / `FAILED`) / `analyse-code` result lines, means
     updating `workflow-lists run` (`apply_result`, the prompts in `run go`) too.

@@ -25,7 +25,7 @@ Run from the target project (any directory inside its git repo):
   workflow-lists run start|queue|skip|log|next|result|commit|changes|end KIND ...
                                                    run state and bookkeeping for the loop skills
   workflow-lists run go KIND [--auto ...]          drive a prepared run: one `claude -p` per item
-  workflow-lists stats [--by plugin,model,...] [--items] [--role item|review|analysis|all]
+  workflow-lists stats [--by plugin,model,...] [--items] [--role item|review|analysis|verify|all]
                                                    tables from the stats file of past runs
   workflow-lists hook                              PostToolUse hook (reads hook JSON on stdin)
 
@@ -563,6 +563,17 @@ def section_body(lines, title):
     return out
 
 
+def verification_tiers(body):
+    """Tier names (Quick / Targeted / Full) in `### Verification` of the `## Workflow` body lines."""
+    tiers, inside = set(), False
+    for _, t in body:
+        if t.startswith("### "):
+            inside = t.strip() == "### Verification"
+        elif inside and (m := re.match(r"^\s*(?:[-*]\s+)?\*\*(Quick|Targeted|Full)\*\*", t)):
+            tiers.add(m.group(1))
+    return tiers
+
+
 def check_claude_md(root, probs):
     path = root / "CLAUDE.md"
     if not path.is_file():
@@ -576,12 +587,7 @@ def check_claude_md(root, probs):
     for sub in ("### Code scope", "### Verification"):
         if not any(t.strip() == sub for _, t in body):
             probs.add("warn", "CLAUDE.md", None, f"`## Workflow` lacks `{sub}`")
-    tiers, inside = set(), False
-    for _, t in body:
-        if t.startswith("### "):
-            inside = t.strip() == "### Verification"
-        elif inside and (m := re.match(r"^\s*(?:[-*]\s+)?\*\*(Quick|Targeted|Full)\*\*", t)):
-            tiers.add(m.group(1))
+    tiers = verification_tiers(body)
     if tiers and "Quick" not in tiers:
         probs.add("warn", "CLAUDE.md", None, "`### Verification` has tiers but no **Quick** block (what runs on every change)")
     text = "\n".join(t for _, t in body)
@@ -1658,6 +1664,7 @@ DEFAULT_RUNS = {
     "review": "features always; fixes of size M or L, or more than 150 changed lines",
     "rework": 1,
     "analyse": {"features": True, "fixes": False},
+    "full_verify": {"features": True, "fixes": True},
     "stop_after": 3,
     "run_branch": False,
     "limits": {"turns": 80, "usd": 5.0},
@@ -1717,6 +1724,10 @@ def parse_runs(root):
     if v:
         for kind, yes in re.findall(r"\b(features|fixes)\s+(yes|no)\b", v, re.I):
             cfg["analyse"][kind.lower()] = yes.lower() == "yes"
+    v = setting("Full verification after run")
+    if v:
+        for kind, yes in re.findall(r"\b(features|fixes)\s+(yes|no)\b", v, re.I):
+            cfg["full_verify"][kind.lower()] = yes.lower() == "yes"
     v = setting("Stop after consecutive failures")
     if v and re.match(r"\d+", v):
         cfg["stop_after"] = int(re.match(r"\d+", v).group())
@@ -2017,7 +2028,8 @@ def print_settings(run, resumed):
     print("models: " + ", ".join(f"{k} {v[0]}" + (f" ({v[1]})" if v[1] else "") for k, v in m.items())
           + f"; escalate to {s['escalate'] or 'none'}")
     print(f"fresh review: {s['review']}; rework rounds: {s['rework']}; analyse after run: "
-          f"{'yes' if s['analyse'][run.kind] else 'no'}; stop after {s['stop_after']} failures; "
+          f"{'yes' if s['analyse'][run.kind] else 'no'}; full verification after run: "
+          f"{'yes' if s.get('full_verify', {}).get(run.kind, True) else 'no'}; stop after {s['stop_after']} failures; "
           f"limits {s['limits']['turns']} turns, {s['limits']['usd']} USD per agent; stats: {s['stats'] or 'off'}")
     if st["missing"]:
         print("missing ## Runs settings (defaults used; suggest /setup-workflow check): " + ", ".join(st["missing"]))
@@ -2336,8 +2348,8 @@ def run_report(run):
     root, st = run.root, run.state
     run.log("end")
     log = run.log_lines()
-    done, partial, blocked, gone, failed, defaults, unverified, checks, scopes, reviews, analysis, skipped, notes = (
-        [] for _ in range(13))
+    done, partial, blocked, gone, failed, defaults, unverified, checks, scopes, reviews, analysis, skipped, notes, verify = (
+        [] for _ in range(14))
     for l in log:
         m = re.match(r"^(?:review (\S+) )?(\w+):\s*(.*)$", l)
         if l.startswith("gone "):
@@ -2363,6 +2375,8 @@ def run_report(run):
                     partial.append(w[1])
                 elif w and w[0] == "ANALYSED":
                     analysis.append(val)
+            elif key == "VERIFY":
+                verify.append(val)
             elif key == "BLOCKED":
                 blocked.append(val)
             elif key == "DEFAULTS":
@@ -2400,6 +2414,7 @@ def run_report(run):
     block("checks run by the item agents", checks)
     block("notes from the agents (side issues, missing tests)", notes)
     block("reviews that changed something or asked for rework", reviews)
+    block("full verification", verify)
     block("after-run analysis", analysis)
     block("commits without a fitting scope (suggested scopes)", scopes)
     if st["missing"]:
@@ -2540,9 +2555,59 @@ def run_go(args):
         print("the run pauses: decide these items with the skill (it runs `run go` again afterwards)")
         return 3
     if status in ("EMPTY", "LIMIT"):
+        full_verification(run)
         after_run(run)
     run_end([kind])
     return 1 if status == "STOP" else 0
+
+
+def full_verification(run):
+    """One agent runs the Full verification tier once at the end of a run; a failure becomes an
+    [H] finding in CLAUDE_ANALYSIS.md. Logs `VERIFY: passed | failed -> finding <id> | skipped: <why>`."""
+    root, st = run.root, run.state
+    start = st["start"]
+    commits = git(root, "rev-list", "--count", f"{start}..HEAD") or "0"
+    md = root / "CLAUDE.md"
+    lines = masked_lines(md.read_text(encoding="utf-8")) if md.is_file() else []
+    if not st["settings"].get("full_verify", {}).get(run.kind, True):
+        why = f"off for {run.kind}"
+    elif commits == "0":
+        why = "no commits"
+    elif "Full" not in verification_tiers(section_body(lines, "Workflow")):
+        why = "no Full tier in ### Verification"
+    else:
+        why = ""
+    if why:
+        run.log(f"VERIFY: skipped: {why}")
+        print(f"VERIFY: skipped ({why})", flush=True)
+        return
+    print(f"VERIFY: running the Full tier ({plural(int(commits), 'commit')} since {start})", flush=True)
+    prompt = (
+        f"You are working in the repo at the current directory, unattended: nobody will answer questions. "
+        f"Run only the **Full** tier of `### Verification` in the `## Workflow` section of CLAUDE.md "
+        f"(read just that section) and never change project code. The run's commits are `{start}..HEAD` "
+        f"(`git log --oneline {start}..HEAD`). If everything passes, end with `RESULT: PASSED`. "
+        f"If anything fails, add one finding with `workflow-lists add CLAUDE_ANALYSIS.md --section 1 --sev H "
+        f"--title \"<title>\"` (body on stdin in the entry format of "
+        f"`{PLUGIN_ROOT}/skills/setup-workflow/list-format.md` part 2: the failing command, the relevant "
+        f"output, and the run's item commits as suspects, with a **Fix:** line), commit only "
+        f"CLAUDE_ANALYSIS.md as `chore: record full verification failure of the run` without a `Refs:` footer, "
+        f"and end with `RESULT: FAILED <finding id> <one line>`. Keep your final answer to at most "
+        f"three plain lines plus that RESULT line.")
+    answer, rec = headless(run, prompt, st["settings"]["models"]["analysis"], "verify")
+    outcome = outcome_of(answer)
+    rec.update({"id": None, "outcome": outcome})
+    run.stat(rec)
+    res = next((v for k, v in reversed(result_lines(answer)) if k == "RESULT"), "")
+    w = res.split()
+    if outcome == "PASSED":
+        msg = "passed"
+    elif outcome == "FAILED" and len(w) > 1 and re.match(r"^\d+\.\d+$", w[1]):
+        msg = f"failed \u2192 finding {w[1]}"
+    else:
+        msg = f"failed \u2192 {res or 'no RESULT line'}"
+    run.log(f"VERIFY: {msg}")
+    print(f"VERIFY: {msg}", flush=True)
 
 
 def after_run(run):
