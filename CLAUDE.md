@@ -160,9 +160,9 @@ How the pieces fit:
   `--max-turns` and `--max-budget-usd` from `## Runs`, `CLAUDECODE` unset so it runs from
   inside a session; `--auto` prepares a run without the skill, queuing only `READY` items)
   and the **stats** (`stats`; one JSON line per agent and run in the `Stats file`, with the
-  plugin version from `plugin.json`, model, size, turns, tokens by cache type, cost,
-  outcome). `WORKFLOW_LISTS_CLAUDE=<path>` substitutes the `claude` binary (a mock in
-  tests). It parses suggested-order steps (`1. **1.1** + **3.2**: why`) and
+  plugin version from `plugin.json`, model, size, turns, tokens by cache type, wall-clock
+  and model (API) time, cost, outcome). `WORKFLOW_LISTS_CLAUDE=<path>` substitutes the
+  `claude` binary (a mock in tests). It parses suggested-order steps (`1. **1.1** + **3.2**: why`) and
   `**Keep open for:**` lines in the format `list-format.md` gives, and prints what it can't
   edit as `file:line`. `hooks/hooks.json` runs `workflow-lists hook` after `Write`/`Edit` of
   a list file. When a list rule, section name, entry field, template or `USER_WORKFLOW.md`
