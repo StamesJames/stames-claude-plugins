@@ -98,14 +98,14 @@ Write each entry with `workflow-lists add CLAUDE_PLAN.md --sev <H|M|L> --title "
 [--model <spec>] [--before <id>]` and its body on stdin, in the full format of
 `list-format.md`: **Idea:** (the idea's id and a few words, or the user's wish), **What**,
 **Why**, **Done when:**, **Verify:** (the checks from step 2, with the tiers they need),
-**Design docs**, **How** (with
-"needs F<n>" where a feature builds on another), **Size**, **Decisions:** (the user's answers, in their words where they wrote their
-own, and your listed small details, with the date), **Keep open for:** if any. `--model` only
-if the pick differs from the default `features` model (`list-format.md` → "Choosing a
-model"). Severity from the idea, M if it has none; if the user decided to go against the
-design docs, start the title with `[CONFLICT]`. Place new entries by priority (`--before`);
-if the new features depend on each other or the user gave an order, add or update a
-`## Suggested order` section (one step per group, as `list-format.md` describes).
+**Design docs**, **How** (with "needs F<n>" where a feature builds on another), **Size**,
+**Decisions:** (the user's answers, in their words where they wrote their own, and your listed
+small details, with the date), **Keep open for:** if any. `--model` only if the pick differs
+from the default `features` model (`list-format.md` → "Choosing a model"). Severity from the
+idea, M if it has none; if the user decided to go against the design docs, start the title with
+`[CONFLICT]`. Place new entries by priority (`--before`); if the new features depend on each
+other or the user gave an order, add or update a `## Suggested order` section (one step per
+group, as `list-format.md` describes).
 
 Sharpening a feature (`F3`): rewrite it in place, then `workflow-lists set F3 updated`.
 

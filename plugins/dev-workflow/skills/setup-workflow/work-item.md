@@ -134,9 +134,9 @@ After a successful, verified change (full or partial):
 ## H. Report
 
 **Attended:** in a few short sentences: which item and why, what you changed (files), the
-defaults you chose, how you verified it (which tiers or checks) and what you couldn't, side issues you noticed, the
-commit (with a scope suggestion if no scope fit), and how many items are still open plus which
-one would be next.
+defaults you chose, how you verified it (which tiers or checks) and what you couldn't, side
+issues you noticed, the commit (with a scope suggestion if no scope fit), and how many items
+are still open plus which one would be next.
 
 **Unattended:** at most three plain lines (what changed), then these lines, each on its own
 line:
