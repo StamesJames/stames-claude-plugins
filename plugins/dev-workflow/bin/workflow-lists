@@ -576,6 +576,14 @@ def check_claude_md(root, probs):
     for sub in ("### Code scope", "### Verification"):
         if not any(t.strip() == sub for _, t in body):
             probs.add("warn", "CLAUDE.md", None, f"`## Workflow` lacks `{sub}`")
+    tiers, inside = set(), False
+    for _, t in body:
+        if t.startswith("### "):
+            inside = t.strip() == "### Verification"
+        elif inside and (m := re.match(r"^\s*(?:[-*]\s+)?\*\*(Quick|Targeted|Full)\*\*", t)):
+            tiers.add(m.group(1))
+    if tiers and "Quick" not in tiers:
+        probs.add("warn", "CLAUDE.md", None, "`### Verification` has tiers but no **Quick** block (what runs on every change)")
     text = "\n".join(t for _, t in body)
     for old in OLD_PATHS:
         if old in text:
@@ -2128,12 +2136,17 @@ def run_next(args):
     return 0
 
 
-RESULT_LINE_RE = re.compile(r"^(BLOCKED|DEFAULTS|SCOPE|UNVERIFIED|NOTE|RESULT):\s*(.*)$")
+RESULT_LINE_RE = re.compile(r"^(BLOCKED|DEFAULTS|SCOPE|UNVERIFIED|NOTE|CHECKS|RESULT):\s*(.*)$")
 
 
 def result_lines(answer):
     return [(m.group(1), m.group(2).strip()) for m in
             (RESULT_LINE_RE.match(l.strip()) for l in answer.split("\n")) if m]
+
+
+def item_checks(run, ref):
+    """The CHECKS lines the item agents (first attempt and rework) logged for ref."""
+    return [l for l in run.log_lines() if re.match(rf"^CHECKS:\s*{re.escape(ref)}\b", l)]
 
 
 def test_note(run, ref, before):
@@ -2323,7 +2336,8 @@ def run_report(run):
     root, st = run.root, run.state
     run.log("end")
     log = run.log_lines()
-    done, partial, blocked, gone, failed, defaults, unverified, scopes, reviews, analysis, skipped, notes = ([] for _ in range(12))
+    done, partial, blocked, gone, failed, defaults, unverified, checks, scopes, reviews, analysis, skipped, notes = (
+        [] for _ in range(13))
     for l in log:
         m = re.match(r"^(?:review (\S+) )?(\w+):\s*(.*)$", l)
         if l.startswith("gone "):
@@ -2355,6 +2369,8 @@ def run_report(run):
                 defaults.append(val)
             elif key == "UNVERIFIED":
                 unverified.append(val)
+            elif key == "CHECKS":
+                checks.append(val)
             elif key == "SCOPE":
                 scopes.append(val)
     blocked = list(dict.fromkeys(b for b in blocked if b.split()[0] not in done))
@@ -2381,6 +2397,7 @@ def run_report(run):
     block("failed (attempt on the branch)", failed)
     block("defaults chosen", defaults)
     block("not verified", unverified)
+    block("checks run by the item agents", checks)
     block("notes from the agents (side issues, missing tests)", notes)
     block("reviews that changed something or asked for rework", reviews)
     block("after-run analysis", analysis)
@@ -2433,10 +2450,11 @@ def rework_prompt(run, n):
             f"questions. {r['note']}\n\nThe item is {n['id']}. Its list entry was already deleted (the "
             f"lists are not yours to edit); it read:\n\n{r['entry']}\n\nRun `workflow-lists brief --context` "
             f"for the rules, standards and verification, read `{PLUGIN_ROOT}/skills/setup-workflow/work-item.md` "
-            f"sections C to E and G, then do the rework: fix what the review asks, run the verification and "
-            f"the item's Verify steps, and commit the follow-up with the same commit type as the reviewed "
+            f"sections C to E and G, then do the rework: fix what the review asks, run the verification "
+            f"(by tier, section E) and the item's Verify steps, and commit the follow-up with the same commit type as the reviewed "
             f"commits and their `Refs:` footer with `, rework` inside the parentheses. Keep your final answer "
-            f"to at most three plain lines plus the result lines of work-item.md section H, ending with "
+            f"to at most three plain lines plus the result lines of work-item.md section H (with the "
+            f"`CHECKS: {n['id']} — …` line for what you ran), ending with "
             f"`RESULT: DONE {n['id']} <short commit>` or `RESULT: FAILED {n['id']} — <reason>`.")
 
 
@@ -2501,8 +2519,12 @@ def run_go(args):
         while action.startswith("REVIEW:"):
             m = re.match(r"REVIEW: (\S+) (\S+)( final)? \| model (\S+)(?: \(omit `model`\))?(?: \| effort (\S+))?", action)
             rng, ref, final, rmodel, reffort = m.group(1), m.group(2), bool(m.group(3)), m.group(4), m.group(5)
-            r_answer, r_rec = headless(run, plugin_prompt("review-change", f"{rng} {ref} unattended" + (" final" if final else "")),
-                                       [rmodel, reffort], "review")
+            r_prompt = plugin_prompt("review-change", f"{rng} {ref} unattended" + (" final" if final else ""))
+            checks = item_checks(run, ref)
+            if checks:
+                r_prompt += ("\n\nThe item agent reported the checks it ran (run this set once, plus what the "
+                             "diff needs):\n" + "\n".join(checks))
+            r_answer, r_rec = headless(run, r_prompt, [rmodel, reffort], "review")
             r_rec.update({"id": ref, "size": n["size"], "outcome": outcome_of(r_answer)})
             run.stat(r_rec)
             for line in r_answer.strip().split("\n")[-6:]:

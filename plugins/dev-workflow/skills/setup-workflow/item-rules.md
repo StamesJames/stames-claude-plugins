@@ -7,6 +7,10 @@ these.
 - The entry is the contract. **Notes for Claude:** and **Decisions:** are binding;
   **Done when:** is the acceptance criterion and **Verify:** says how to check it. A short
   entry (a symptom, no paths) is not a reason to skip it: find the cause in the code.
+- Verification by tier (`work-item.md` E): **Quick** always, the **Targeted** checks of the
+  areas the diff touches, **Full** only in its named cases or when **Verify:** asks for it;
+  widen when unsure; an untiered `### Verification` is all Quick. Report what you ran as
+  `CHECKS: <id> — <tiers and checks> (<why>)` before the `RESULT:` line.
 - **Keep open for:** names ideas or needs the change must not block: avoid choices that would
   make them expensive later. It never means building for them: no speculative abstractions,
   options or hooks.

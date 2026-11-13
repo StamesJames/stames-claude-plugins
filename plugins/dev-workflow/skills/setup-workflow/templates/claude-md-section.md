@@ -19,10 +19,23 @@ finding or plan item is resolved during normal work, delete its entry in the sam
 
 ### Verification
 
-How to check a change; every fix and feature runs these.
+How to check a change, in tiers. An agent runs **Quick**, the **Targeted** checks of the areas
+its change touches, and **Full** only in the cases named there or when the item's **Verify:**
+asks for it. A section without tier labels counts as Quick: everything, every change.
+
+**Quick** (every change):
 
 1. `<command>`: <what must hold, e.g. builds with no new errors or warnings>.
 2. `<command>`: <what to compare before/after, what must not appear>.
-3. <optional visual/manual check and the tool for it, if available>.
+
+**Targeted** (by area; drop this block if every check is quick):
+
+- `<dir or glob>` → `<command>`: <what it checks>.
+
+**Full** (slow; only when <the cases, e.g. a save-format or engine change>; drop this block if
+there is none):
+
+1. `<command>`: <what must hold>.
+2. <optional visual/manual check and the tool for it, if available>.
 
 <What these cannot exercise, so the report names it.>

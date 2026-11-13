@@ -124,7 +124,7 @@ again stays open and goes into the report.
 The driver already ran the closing analysis (if `## Runs` asks for it; large changes are
 split across parallel read-only part agents) and printed the report: commits, done, gone,
 blocked (with the decision needed), skipped, held, failed (with branches), defaults, what
-couldn't be verified, notes from the agents, reviews that changed something or asked for
+couldn't be verified, the checks the item agents ran, notes from the agents, reviews that changed something or asked for
 rework, the analysis result, scopes to add, missing settings, list errors and the cost. Give
 it to the user in short form: the commits and run branch first, then what needs their
 attention (blocked, failed, unverified, notes, defaults to tune), the cost, and

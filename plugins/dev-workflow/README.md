@@ -18,11 +18,16 @@ clean.
 The loops ask every needed decision up front, then hand over to the bundled driver
 (`workflow-lists run go`), which runs unattended in the background or from your shell: one
 fresh headless agent (`claude -p`) per item with model, effort, turn and cost limits from
-`USER_WORKFLOW.md` (`## Runs`), a fresh review that re-runs the verification and sends an
+`USER_WORKFLOW.md` (`## Runs`), a fresh review that re-runs the item's checks and sends an
 unmet item back for a rework round, failed attempts saved on `workflow/failed/<item>`
 branches with one escalated retry, and a closing analysis of what changed (split across
 parallel agents when the run was large). No session model spends tokens on the loop itself;
 an interrupted run resumes where it stopped.
+
+Slow verification can be split into tiers in the project's `CLAUDE.md` (`### Verification`):
+**Quick** runs on every change, **Targeted** checks only for the areas a change touches,
+**Full** only in named cases. Each item agent reports what it ran (`CHECKS:`), and the review
+runs that same set once instead of everything again. An untiered section runs in full.
 
 Every agent of a run writes one line to a stats file (plugin version, model, size, turns,
 tokens, cost, outcome), and `workflow-lists stats` turns it into tables per plugin version,

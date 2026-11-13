@@ -34,8 +34,12 @@ used up: you can't send it back; fix what you can and report the rest).
 
 ## 2. Acceptance
 
-1. Run the verification from `CLAUDE.md` → `### Verification` yourself, and the entry's
-   **Verify:** steps. Don't trust the implementer's report.
+1. Run the verification yourself, and the entry's **Verify:** steps; don't trust the
+   implementer's report. If `### Verification` has tiers, run the set the item agent ran once
+   (its `CHECKS:` line, appended to the prompt in a run; without one, choose by the tier rule
+   in the item rules), plus whatever the diff needs beyond it. A set that was clearly too
+   light for the diff (a touched area's Targeted check, or Full in its named cases, left out)
+   is a gap; with `final`, run what was missing and note it.
 2. Check **Done when:** against the diff and the running code where you can: is every part
    of it there, do **Decisions:** and **Notes for Claude:** hold, does anything in the change
    do what **Keep open for:** says not to block?
@@ -70,7 +74,8 @@ Missing tests for new behaviour are a gap for step 2 when the project has a test
 ## 4. Apply and commit
 
 If nothing clearly improves the change, edit nothing and go to step 5. Otherwise make the
-improvements, never touching hands-off paths, then run the verification again. If it fails
+improvements, never touching hands-off paths, then verify again: only **Quick** and the
+**Targeted** checks of the files you touched, never **Full** (untiered: all of it). If it fails
 and you can't fix it quickly, undo all your edits (`git restore` / remove files you created)
 and report `FAILED`.
 
@@ -82,11 +87,12 @@ reminder.
 
 ## 5. Report
 
-Attended: whether the change does what was asked, what you changed and why, in a few lines;
-problems you saw but didn't fix; the commit.
+Attended: whether the change does what was asked, which checks you ran, what you changed and
+why, in a few lines; problems you saw but didn't fix; the commit.
 
-Unattended: at most three plain lines, then `NOTE: <id> — <problem seen, not fixed>` lines,
-`SCOPE: …` if the commit has no scope, and as the very last line exactly one of:
+Unattended: at most three plain lines, then `CHECKS: <id> — <tiers and checks run> (<why>)`,
+`NOTE: <id> — <problem seen, not fixed>` lines, `SCOPE: …` if the commit has no scope, and as
+the very last line exactly one of:
 
 - `RESULT: ACCEPTED [<short commit>]`: the change does what was asked; the commit if you
   tidied something.

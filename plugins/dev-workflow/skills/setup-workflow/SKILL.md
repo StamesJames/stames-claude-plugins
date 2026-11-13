@@ -37,7 +37,10 @@ an older, project-specific form of this workflow (see A.4).
 3. **Verification:** how is a change checked here? Look for test runners, linters, type
    checkers, build commands (`package.json` scripts, `Makefile`, `Cargo.toml`, `pyproject.toml`,
    `project.godot`, CI configs under `.github/workflows/` and similar), and any diagnostic
-   scripts. Prefer what CI runs. Try the cheap ones to see that they work.
+   scripts. Prefer what CI runs. Try the cheap ones to see that they work. If a check is
+   slow (minutes), propose the tiered format of the template: what runs on every change
+   (**Quick**), what only for changes in an area (**Targeted**), what only in named cases
+   (**Full**).
 4. **Code scope:** which directories hold project code, which are generated (build output,
    caches, lock files) or vendored (`vendor/`, `third_party/`, `addons/`, copied libraries;
    check `.gitignore` and license files).
@@ -58,7 +61,8 @@ paths, ask-before rules, run settings (models, limits, headless permissions, sta
 scopes, verification commands. Then ask with
 `AskUserQuestion` only what you could not settle yourself, for example:
 
-- verification commands, if none were found or they don't run;
+- verification commands, if none were found or they don't run, and their tiers if you
+  proposed some;
 - which docs are the design intent, and whether conflicting ideas are allowed;
 - the scope list (offer your list as the recommended option);
 - an existing commit convention that differs from the default: keep the default (recommended)
@@ -118,9 +122,14 @@ per the project's `## Commits`). Remind the user that nothing was committed.
      directories that none of them covers;
    - verification commands that fail, are missing, or no longer match the build/test setup
      (run the cheap ones);
+   - an untiered `### Verification` that is slow (a step taking minutes, or long item and
+     review wall times in `workflow-lists stats` and `stats --role review`, with
+     `--project <repo dir name>`): propose splitting it into **Quick** / **Targeted** /
+     **Full** as in the template;
    - scopes that match no area any more, and areas that recent commits (`git log -50`) or the
      code show without a scope.
-3. Fix facts directly: the `## Workflow` section in `CLAUDE.md`, missing list files (from the
+3. Fix facts directly: the `## Workflow` section in `CLAUDE.md` (but never split
+   `### Verification` into tiers without the user's OK), missing list files (from the
    templates), list headers, and the check's `error` lines in Claude's lists. In the user's
    lists, fix only structure (`_Next id:_`, `_No open items._`, headers, dangling
    references) and leave their entries' wording, stamps and severities to the user. For

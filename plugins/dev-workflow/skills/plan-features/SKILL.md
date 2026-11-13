@@ -59,7 +59,9 @@ what constrains it. Stay read-only. Then work out:
 - **How it is verified:** for each feature, the concrete checks that show **Done when:**
   holds: a test to add (what it asserts), a command and its expected output, or an
   observable behaviour and how to trigger it. The implementing agent runs them, the
-  reviewer re-runs them; a Done when nobody can check is not done.
+  reviewer re-runs them; a Done when nobody can check is not done. If `CLAUDE.md` →
+  `### Verification` has tiers, also name the tiers or checks the feature needs beyond
+  Quick (e.g. "targeted: save/; full"), so the agents run them and nothing slower.
 - **Keep open for:** other open ideas (`USER_IDEAS.md`, `CLAUDE_IDEAS.md`) the implementation
   should not block.
 
@@ -95,7 +97,8 @@ Lead the conversation; the user should mostly pick options, not write specs.
 Write each entry with `workflow-lists add CLAUDE_PLAN.md --sev <H|M|L> --title "<title>"
 [--model <spec>] [--before <id>]` and its body on stdin, in the full format of
 `list-format.md`: **Idea:** (the idea's id and a few words, or the user's wish), **What**,
-**Why**, **Done when:**, **Verify:** (the checks from step 2), **Design docs**, **How** (with
+**Why**, **Done when:**, **Verify:** (the checks from step 2, with the tiers they need),
+**Design docs**, **How** (with
 "needs F<n>" where a feature builds on another), **Size**, **Decisions:** (the user's answers, in their words where they wrote their
 own, and your listed small details, with the date), **Keep open for:** if any. `--model` only
 if the pick differs from the default `features` model (`list-format.md` → "Choosing a

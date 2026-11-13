@@ -24,77 +24,6 @@ Legend: **[H]** most wanted, **[M]** wanted, **[L]** nice to have.
 
 _Next id: F3_
 
-### F1 [H] Tiered verification for items and reviews
-_Written: 2026-11-13 16:18 CET (`b21c883`)_
-
-**Idea:** free-text wish (2026-11-13): slow verification (a Godot project's one big playthrough
-script, 15–30 min per item, 13–22 min per review) runs at least twice per item; split it into
-tiers and run only what the change needs.
-
-**What:** a target project's `CLAUDE.md` → `### Verification` can be split into **Quick**
-(every change), **Targeted** (per area: "touches `player/` → movement test") and **Full**
-(slow; only in named cases, plus once after a run, F2). Item agents run quick, the targeted
-checks for the areas they touched, and full only in its named cases or when the entry's
-**Verify:** asks for it, and report what they ran. The review runs that same set once instead
-of everything again.
-
-**Why:** in projects with slow verification most of a run's wall-clock time is re-running
-checks unrelated to the change (stats: reviews of 13–18 turns taking 13–22 min); tiers cut that
-without weakening the acceptance gate.
-
-**Done when:**
-- `templates/claude-md-section.md` shows the tiered format (bold labels **Quick** /
-  **Targeted** / **Full**, the Full label carrying its "when" cases), and says an untiered
-  section counts as Quick (everything, every time: today's behaviour).
-- `work-item.md` section E: run Quick, the Targeted checks whose areas the diff touches, Full
-  only in its named cases or when **Verify:** names it; widen when unsure. Section H adds a
-  `CHECKS: <id> — <tiers/checks run> (<why>)` line before `RESULT:`; `item-rules.md` carries
-  the digest.
-- `workflow-lists run`: `apply_result` accepts `CHECKS:` (RESULT_LINE_RE), logs it, shows it in
-  the report, and the review prompt (`run go`) passes the item's CHECKS line to the reviewer;
-  the rework prompt asks for the line too.
-- `review-change` step 2 runs the item's set (from the CHECKS line, or by its own judgement
-  without one) plus whatever the diff needs; a set that was clearly too light is a gap
-  (`REWORK`, or with `final` run it and note it). Step 4 after its own edits reruns only Quick
-  and the Targeted checks of the files it touched, never Full.
-- `plan-features` step 2 / 4: **Verify:** names the tiers or checks a feature needs when the
-  project's verification is tiered (e.g. "targeted: save/; full").
-- `setup-workflow` B (Check) and A (setup): suggest splitting into tiers when the verification
-  is untiered and slow (a step taking minutes) or when the run stats show long item/review wall
-  times; never rewrite it without the user.
-- `workflow-lists check` accepts both forms; a tiered section without a **Quick** block warns.
-
-**Verify:**
-- The scratch-repo smoke test prints `OK` with the new template, and again after replacing `###
-  Verification` with an untiered one.
-- Mock run (`WORKFLOW_LISTS_CLAUDE=<mock>`, `run start` / `run queue`, `run go features`): an
-  item mock printing `CHECKS: F1 — quick, targeted save/ (touches save)` gets the line into the
-  run log and report, and the review mock's prompt contains it.
-- `claude plugin validate .` and `plugins/dev-workflow` pass (known README warning only); the
-  cross-reference grep prints only `done`; `workflow-lists check` at the repo root prints `OK`.
-- Read-through: no skill still says "every fix and feature runs these" / "run the verification"
-  without the tier rule.
-
-**Design docs:** `CLAUDE.md` → "The `dev-workflow` plugin" (shared rule files, `work-item.md`
-section letters, result lines kept in sync with `workflow-lists run`);
-`plugins/dev-workflow/README.md`.
-
-**How:** prompt changes in `templates/claude-md-section.md`, `work-item.md` E and H,
-`item-rules.md`, `review-change/SKILL.md` steps 2 and 4–5, `plan-features/SKILL.md` steps 2 and
-4, `setup-workflow/SKILL.md` A and B; script: `RESULT_LINE_RE` and `apply_result` for
-`CHECKS:`, the review and rework prompts in `run go`, the `check_claude_md` warning. Update
-`CLAUDE.md` (result-line list) and the plugin README. Minor version bump. This repo's own `###
-Verification` stays untiered.
-
-**Size:** M (many files, each change small). Risk: agents choosing too light a set; the
-reviewer's REWORK and F2's full run catch it.
-
-**Decisions:** Tier format: bold labels **Quick** / **Targeted** / **Full** under `###
-Verification`. Item agents report a new `CHECKS:` result line, which the driver logs and passes
-to the reviewer. Review runs the item's set once (more if the diff needs it, REWORK if too
-light); after its own edits only Quick plus affected Targeted, never Full. Untiered sections
-behave as today (2026-11-13)
-
 ### F2 [M] Full verification once after a run
 _Written: 2026-11-13 16:19 CET (`b21c883`)_
 
@@ -141,7 +70,7 @@ Runs` settings read by the script); `loop.md` (what the run does unattended).
 **How:** `bin/workflow-lists`: `DEFAULT_RUNS` / `parse_runs` for the setting, a
 `full_verification(run)` step called from `run go` before `after_run`, its prompt, stats role
 `verify`, report line; `templates/USER_WORKFLOW.md` `## Runs`; `loop.md` (the report lists it);
-this repo's `USER_WORKFLOW.md` only if the user asks; `CLAUDE.md` driver description. Needs F1.
+this repo's `USER_WORKFLOW.md` only if the user asks; `CLAUDE.md` driver description. Builds on the tiers F1 added.
 
 **Size:** M. Risk: a flaky full verification creating noise findings; the finding names the
 output so the user can judge.
@@ -155,4 +84,4 @@ without commits or without a Full tier; analysis model; stats role `verify` (202
 
 ## Suggested order
 
-1. **F1** + **F2**: F2 needs the **Full** tier F1 introduces.
+1. **F2**: builds on the **Full** tier F1 added.

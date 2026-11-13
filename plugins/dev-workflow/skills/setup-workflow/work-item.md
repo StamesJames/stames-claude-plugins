@@ -89,9 +89,13 @@ Keep it short: one pass over the diff, not a second implementation round.
 
 ## E. Verify
 
-1. Run the verification from `CLAUDE.md` → `### Verification`. Where it compares output
-   before and after, run it before editing too if the change may alter behaviour. It must pass
-   with no new errors or warnings, and behaviour may only change where the item intends it.
+1. Run the verification from `CLAUDE.md` → `### Verification`, by tier if it has tiers:
+   **Quick** always, the **Targeted** checks whose areas your diff touches, **Full** only in
+   the cases its label names or when the entry's **Verify:** asks for it. Widen when unsure
+   whether a check covers the change. A section without tier labels counts as Quick: run all
+   of it. Where a check compares output before and after, run it before editing too if the
+   change may alter behaviour. It must pass with no new errors or warnings, and behaviour may
+   only change where the item intends it.
 2. If `CLAUDE.md` has no verification section, use the project's build, lint and test commands
    you can find, and say in the report that the section is missing (`/setup-workflow check`).
 3. Run the item's **Verify:** steps and check **Done when:** explicitly. Run the visual or
@@ -130,7 +134,7 @@ After a successful, verified change (full or partial):
 ## H. Report
 
 **Attended:** in a few short sentences: which item and why, what you changed (files), the
-defaults you chose, how you verified it and what you couldn't, side issues you noticed, the
+defaults you chose, how you verified it (which tiers or checks) and what you couldn't, side issues you noticed, the
 commit (with a scope suggestion if no scope fit), and how many items are still open plus which
 one would be next.
 
@@ -142,6 +146,8 @@ line:
 - `UNVERIFIED: <id> — <what you couldn't verify and how the user can check it>` if anything.
 - `NOTE: <id> — <a side issue you noticed, or what you had to decide about verification>`,
   one per note; they reach the run's report.
+- `CHECKS: <id> — <tiers and checks run> (<why>)`, e.g. `CHECKS: F2 — quick, targeted save/
+  (touches save)`: what you ran in E, so the review runs the same set.
 - `SCOPE: <short commit> none — suggest <scope> (<what it would cover>)` if the commit has no
   scope.
 - As the very last line, exactly one of:

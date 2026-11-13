@@ -112,7 +112,7 @@ How the pieces fit:
     code. Everything unattended (one `claude -p` per item, booking, review and rework
     rounds, WIP branches, escalation, failure stamps, after-run analysis with parallel part
     agents, stats, report) is in the script. Changing `work-item.md`'s `RESULT:` /
-    `BLOCKED:` / `DEFAULTS:` / `UNVERIFIED:` / `NOTE:` lines or arguments, or
+    `BLOCKED:` / `DEFAULTS:` / `UNVERIFIED:` / `CHECKS:` / `NOTE:` lines or arguments, or
     `review-change` (`ACCEPTED` / `REWORK` / `FAILED`) / `analyse-code` result lines, means
     updating `workflow-lists run` (`apply_result`, the prompts in `run go`) too.
 - `skills/setup-workflow/templates/` holds the templates `/setup-workflow` copies into a target
@@ -124,9 +124,13 @@ How the pieces fit:
   `work-item.md`. `user-only` restricts the fix skills to `USER_ANALYSIS.md`.
 - **Loop skills** (`fix-all-findings`, `implement-all-features`) are a few specifics on top of
   `loop.md`. They never touch code. `review-change` is the acceptance gate of a run: it
-  re-runs the verification and the entry's `Verify:` steps, sends an unmet item back
-  (`REWORK`, up to `Rework rounds` from `## Runs`, the last round reviewed with `final`),
-  then tidies.
+  re-runs the item's checks (the `CHECKS:` line the driver passes on; all of an untiered
+  `### Verification`) and the entry's `Verify:` steps, sends an unmet item back (`REWORK`,
+  up to `Rework rounds` from `## Runs`, the last round reviewed with `final`), then tidies.
+- **Verification tiers:** a target's `### Verification` may be split into **Quick** /
+  **Targeted** / **Full** (`templates/claude-md-section.md`); the rule for what an agent
+  runs is in `work-item.md` E (digest in `item-rules.md`), and `workflow-lists check` warns
+  about tiers without **Quick**. Untiered means everything, every change.
 - **Feature flow:** the user writes ideas (as vague as they like) in `USER_IDEAS.md`;
   `plan-features` asks the open questions and writes concrete features into `CLAUDE_PLAN.md`
   (an entry there is approved for building) and deletes the planned ideas; only
