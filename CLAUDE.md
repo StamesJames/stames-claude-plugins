@@ -111,10 +111,11 @@ How the pieces fit:
     decisions, then `workflow-lists run go` in the background, and what to do with its exit
     code. Everything unattended (one `claude -p` per item, booking, review and rework
     rounds, WIP branches, escalation, failure stamps, the once-per-run full verification,
-    after-run analysis with parallel part agents, stats, report) is in the script. Changing `work-item.md`'s `RESULT:` /
-    `BLOCKED:` / `DEFAULTS:` / `UNVERIFIED:` / `CHECKS:` / `NOTE:` lines or arguments, or
-    `review-change` (`ACCEPTED` / `REWORK` / `FAILED`) / `analyse-code` result lines, means
-    updating `workflow-lists run` (`apply_result`, the prompts in `run go`) too.
+    after-run analysis with parallel part agents, stats, report) is in the script. Changing
+    `work-item.md`'s `RESULT:` / `BLOCKED:` / `DEFAULTS:` / `UNVERIFIED:` / `CHECKS:` /
+    `NOTE:` lines or arguments, or `review-change` (`ACCEPTED` / `REWORK` / `FAILED`) /
+    `analyse-code` result lines, means updating `workflow-lists run` (`apply_result`, the
+    prompts in `run go`) too.
 - `skills/setup-workflow/templates/` holds the templates `/setup-workflow` copies into a target
   project (the five lists, `USER_WORKFLOW.md`, and `claude-md-section.md` for the target's
   `CLAUDE.md`). If a rule or section changes, check whether the templates and the "Check" mode
