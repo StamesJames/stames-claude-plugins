@@ -8,6 +8,7 @@ unless noted. Items are roughly ordered by priority inside each section.
 Passes:
 
 - 2026-11-01 08:36 CET at 78d25f9: full (whole code scope, read directly: 30 files, ~3000 lines), 11 new, 0 fixed.
+- 2026-11-13 19:30 CET at 7664d0d: since 845efcd (after-run), 0 new, 0 fixed.
 
 Legend: **[H]** high — fix before building more on top, **[M]** medium, **[L]** low / nice to have.
 
